@@ -1,0 +1,577 @@
+"""The menu-driven interactive CLI: every menu_*() handler plus main()."""
+import csv
+import json
+import os
+import random
+import time
+import torch
+import torch.nn.functional as F
+
+from .config import config
+from .state import train_state
+from . import dataset
+from . import training
+from . import monitor
+from . import plotting
+from . import sft
+from .generation import generate
+from .mdbe import Carbide, export_mdbe_table, MODES
+
+
+def menu_main():
+    """Main menu."""
+    print("\n" + "="*70)
+    print("CARBIDE INTERACTIVE CLI")
+    print(f"Dataset: {config.data_file} ({len(dataset.data):,} bytes)")
+    print("="*70)
+    print("""
+MAIN MENU:
+  1. Train model
+  2. REPL (generate text interactively)
+  3. Hyperparameters
+  4. Checkpoints
+  5. Inspect MDBE embeddings
+  6. Run ablation study
+  7. Load dataset         [NEW: Option 2, 3]
+  8. Save outputs
+  9. Fine-tune (SFT)      [task1 Part 3]
+  10. Exit
+""")
+
+
+def menu_train():
+    """Training control."""
+    is_running = train_state.training_active
+    status_str = " [RUNNING IN BACKGROUND]" if is_running else ""
+
+    with train_state.training_lock:
+        cur_step = train_state.step
+        cur_target = train_state.training_target_steps
+        cur_loss = train_state.current_loss
+
+    print("\n" + "-"*70)
+    print(f"TRAINING MENU{status_str}")
+    print("-"*70)
+    print(f"Current: step {cur_step}/{cur_target}, "
+          f"loss {cur_loss:.4f}")
+    print()
+
+    if is_running:
+        print("""
+  1. Show training log (Option 1)
+  2. Show live monitor (Option 2 - btop style)
+  3. Show both (Option 3)
+  4. Stop background training
+  5. Pause (save checkpoint)
+  6. Back to main menu (training continues)
+""")
+    else:
+        print("""
+  1. Start training in background (Exit menu, training runs)
+  2. Start training and watch log (Standard output)
+  3. Start training and watch live monitor (btop-style)
+  4. Start training and watch both (Log + btop)
+  5. Resume from checkpoint
+  6. Reset and train from scratch
+  7. Back to main menu
+""")
+
+    choice = input("Choice: ").strip()
+
+    if is_running:
+        if choice == "1":
+            monitor.show_training_log()
+        elif choice == "2":
+            monitor.show_live_monitor()
+        elif choice == "3":
+            monitor.show_both_monitors()
+        elif choice == "4":
+            training.stop_background_training()
+        elif choice == "5":
+            training.save_checkpoint("_paused")
+            print("  ✓ Checkpoint saved")
+        elif choice == "6":
+            print("  (Training continues in background. Returning to main menu...)")
+            time.sleep(1)
+            return
+    else:
+        try:
+            n = int(input("  Steps to run: "))
+        except ValueError:
+            print("  ✗ Please enter a number")
+            return
+        train_state.training_target_steps = train_state.step + n
+
+        if choice == "1":
+            training.start_background_training(n, display_mode="none")
+            print(f"  ✓ Training started in background ({n} steps)")
+            print("  Returning to main menu...")
+            time.sleep(1)
+            return
+        elif choice == "2":
+            training.start_background_training(n, display_mode="log")
+        elif choice == "3":
+            training.start_background_training(n, display_mode="monitor")
+        elif choice == "4":
+            training.start_background_training(n, display_mode="both")
+        elif choice == "5":
+            resume_training()
+        elif choice == "6":
+            reset_and_train()
+
+
+def reset_and_train():
+    """Reset training and train from scratch."""
+    try:
+        n = int(input("  Steps to train: "))
+    except ValueError:
+        print("  ✗ Please enter a number")
+        return
+    train_state.reset()
+    training.model = None
+    training.opt = None
+    training.train_n_steps(n)
+
+
+def resume_training():
+    """Resume from checkpoint."""
+    suffix = input("  Checkpoint suffix (default blank): ").strip()
+    if training.load_checkpoint(f"_{suffix}" if suffix else ""):
+        try:
+            n = int(input("  Additional steps to run: "))
+        except ValueError:
+            print("  ✗ Please enter a number")
+            return
+        training.train_n_steps(n)
+
+
+def menu_repl():
+    """Interactive text generation loop."""
+    print("\n" + "-"*70)
+    print("REPL MODE — Type prompts to generate continuations")
+    print("-"*70)
+    print("Commands: :help, :temp <0.5-2.0>, :topk <5-50>, :exit")
+    print()
+
+    temperature = 0.8
+    top_k = 20
+
+    while True:
+        try:
+            prompt = input("> ").strip()
+
+            if not prompt:
+                continue
+            elif prompt == ":exit":
+                break
+            elif prompt == ":help":
+                print("  :temp <val>  - set temperature (higher=more random)")
+                print("  :topk <val>  - set top-k filtering")
+                print("  :exit        - back to menu")
+                continue
+            elif prompt.startswith(":temp "):
+                temperature = float(prompt.split()[1])
+                print(f"  ✓ Temperature set to {temperature}")
+                continue
+            elif prompt.startswith(":topk "):
+                top_k = int(prompt.split()[1])
+                print(f"  ✓ Top-k set to {top_k}")
+                continue
+
+            continuation = generate(prompt, n_bytes=80, temperature=temperature, top_k=top_k)
+            print(f"  {continuation}\n")
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print(f"  Error: {e}")
+
+
+def menu_hyperparams():
+    """Adjust hyperparameters."""
+    print("\n" + "-"*70)
+    print("HYPERPARAMETERS")
+    print("-"*70)
+    print(f"""
+Current settings:
+  d_model:      {config.d_model}
+  n_layers:     {config.n_layers}
+  d_state:      {config.d_state}
+  batch_size:   {config.batch_size}
+  learning_rate: {config.learning_rate}
+
+1. d_model (embedding dimension)
+2. n_layers (SSM blocks)
+3. d_state (state dimension per SSM)
+4. batch_size
+5. learning_rate
+6. Back
+""")
+    choice = input("Edit: ").strip()
+
+    if choice in ("1", "2", "3") and train_state.training_active:
+        print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
+        print("    before changing d_model/n_layers/d_state. Batch size and learning rate are safe to")
+        print("    change while training runs.")
+        return
+
+    try:
+        if choice == "1":
+            config.d_model = int(input("  New d_model: "))
+        elif choice == "2":
+            config.n_layers = int(input("  New n_layers: "))
+        elif choice == "3":
+            config.d_state = int(input("  New d_state: "))
+        elif choice == "4":
+            config.batch_size = int(input("  New batch_size: "))
+        elif choice == "5":
+            config.learning_rate = float(input("  New learning_rate: "))
+    except ValueError:
+        print("  ✗ Please enter a valid number")
+        return
+
+    if choice in ["1", "2", "3"]:
+        training.model = None
+        training.opt = None
+        print("  ⚠ Model structure changed — model will be reinitialized on next training step")
+
+    if choice in ["4", "5"]:
+        print("  ✓ Updated (takes effect on next training)")
+
+
+def menu_checkpoints():
+    """Checkpoint management."""
+    print("\n" + "-"*70)
+    print("CHECKPOINTS")
+    print("-"*70)
+
+    ckpts = [f[:-3] for f in os.listdir(config.checkpoint_dir) if f.endswith('.pt')]
+    if ckpts:
+        print("  Available checkpoints:")
+        for ckpt in ckpts:
+            print(f"    {ckpt}")
+    else:
+        print("  No checkpoints found")
+
+    print("""
+1. Save checkpoint
+2. Load checkpoint
+3. List checkpoints
+4. Back
+""")
+    choice = input("Choice: ").strip()
+
+    if choice == "1":
+        suffix = input("  Suffix (e.g., 'final'): ").strip()
+        training.save_checkpoint(f"_{suffix}" if suffix else "")
+    elif choice == "2":
+        if train_state.training_active:
+            print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
+            print("    before loading a checkpoint. Saving is fine while training runs.")
+            return
+        suffix = input("  Suffix to load: ").strip()
+        training.load_checkpoint(f"_{suffix}" if suffix else "")
+    elif choice == "3":
+        pass  # Already listed above
+
+
+def menu_mdbe():
+    """Inspect MDBE embeddings."""
+    print("\n" + "-"*70)
+    print("MDBE EMBEDDINGS")
+    print("-"*70)
+
+    if training.model is None:
+        print("  Model not initialized")
+        return
+
+    sample_bytes = {32: "SPACE", 65: "A", 97: "a", 48: "0", 33: "!"}
+    print("\n  Sample embeddings (first 8 dims):\n")
+    print(f"  {'Byte':>6} {'Char':^10} Embedding dims")
+    print("  " + "-"*60)
+
+    for b, char in sample_bytes.items():
+        emb = training.model.mdbe.base(torch.tensor([[b]]))[0, 0].detach().tolist()
+        emb_str = " ".join(f"{x:7.3f}" for x in emb[:8])
+        print(f"  {b:6d} {char:^10} {emb_str}")
+
+
+def menu_ablation():
+    """Run ablation study."""
+    print("\n" + "-"*70)
+    print("ABLATION STUDY")
+    print("-"*70)
+    print("""
+  Testing: full constraints vs no constraints vs plain embedding
+  This will train 3 models for 1500 steps each (~15 min on CPU).
+
+1. Run full ablation
+2. Cancel
+""")
+    choice = input("Choice: ").strip()
+
+    if choice == "1":
+        run_ablation()
+
+
+def run_ablation():
+    """Run full ablation study."""
+    print("\n  Running ablation (3 × 1500 steps)...\n")
+
+    def run_training(mode, steps=1500, seed=42):
+        torch.manual_seed(seed)
+        random.seed(seed)
+        model_v = Carbide(d_model=config.d_model, n_layers=config.n_layers,
+                         d_state=config.d_state)
+        opt_v = torch.optim.AdamW(model_v.parameters(), lr=config.learning_rate)
+        curve = []
+        for s in range(1, steps + 1):
+            xb, yb = dataset.get_batch()
+            loss = F.cross_entropy(model_v(xb, mode=mode).reshape(-1, 256),
+                                   yb.reshape(-1))
+            opt_v.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model_v.parameters(), 1.0)
+            opt_v.step()
+            curve.append(loss.item())
+            if s % 250 == 0:
+                avg_loss = sum(curve[-100:]) / min(100, len(curve))
+                print(f"    {mode:18s} step {s:4d} | loss {avg_loss:.4f}")
+        return curve
+
+    results = {}
+    for mode in MODES:
+        print(f"  Training mode: {mode}")
+        results[mode] = run_training(mode)
+
+    fig, ax = plotting.plt.subplots(figsize=(8, 4.5))
+    for m, c in results.items():
+        smooth = [sum(c[max(0, i-25):i+1]) / len(c[max(0, i-25):i+1])
+                  for i in range(len(c))]
+        ax.plot(range(1, len(c) + 1), smooth, label=m, linewidth=1.4)
+    ax.set_xlabel("training step")
+    ax.set_ylabel("loss (smoothed)")
+    ax.set_title("MDBE Ablation: Constraints vs Baselines")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.savefig("carbide_ablation.png", dpi=150, bbox_inches="tight")
+    plotting.plt.close()
+
+    print("\n  ✓ Ablation complete: carbide_ablation.png")
+
+
+def menu_load_dataset():
+    """Load custom dataset (Option 2: REPL augmentation, Option 3: Menu)."""
+    print("\n" + "-"*70)
+    print("LOAD DATASET")
+    print("-"*70)
+    print(f"Current dataset: {config.data_file} ({len(dataset.data):,} bytes)\n")
+
+    if train_state.training_active:
+        print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
+        print("    before loading a different dataset.")
+        return
+
+    txt_files = [f for f in os.listdir(".") if f.endswith(".txt")]
+    if txt_files:
+        print("  📁 Available .txt files in current directory:\n")
+        for i, f in enumerate(txt_files, 1):
+            size = os.path.getsize(f)
+            print(f"    [{i}] {f:40s} ({size:>10,} bytes)")
+        print()
+
+    print("""
+MENU:
+  1. Select from list above (enter number)
+  2. Type full path manually
+  3. Use fallback sample
+  4. Use train.txt (if exists)
+  5. Generate text from model & retrain (Option 2)
+  6. Back
+""")
+    choice = input("Choice: ").strip()
+
+    if choice == "1":
+        if not txt_files:
+            print("  ✗ No .txt files found in current directory")
+            return
+        try:
+            idx = int(input("  Select file number: ").strip()) - 1
+            if 0 <= idx < len(txt_files):
+                filepath = txt_files[idx]
+                dataset.load_dataset(filepath)
+            else:
+                print("  ✗ Invalid selection")
+        except ValueError:
+            print("  ✗ Please enter a number")
+    elif choice == "2":
+        print("\n  Enter full path to file:")
+        print("  Examples:")
+        print("    my_data.txt")
+        print("    /home/user/Documents/story.txt")
+        print("    C:\\Users\\User\\file.txt")
+        filepath = input("  Path: ").strip()
+        if filepath:
+            dataset.load_dataset(filepath)
+    elif choice == "3":
+        text = dataset.FALLBACK * 500
+        dataset.data = torch.tensor(list(text.encode("utf-8")), dtype=torch.long)
+        config.data_file = "[fallback]"
+        print(f"  ✓ Using fallback ({len(dataset.data):,} bytes)")
+    elif choice == "4":
+        if os.path.exists("train.txt"):
+            dataset.load_dataset("train.txt")
+        else:
+            print("  ✗ train.txt not found")
+    elif choice == "5":
+        augment_data_with_generation()
+    elif choice == "6":
+        return
+
+
+def augment_data_with_generation():
+    """Option 2: Generate text from model and retrain on augmented data."""
+    if training.model is None or train_state.step == 0:
+        print("  ⚠ Model not trained yet. Train first, then return here.")
+        return
+
+    print("\n  Generating text to augment dataset...")
+    try:
+        n_samples = int(input("  How many samples to generate? (1-10): "))
+        n_bytes_per = int(input("  Bytes per sample? (50-500): "))
+    except ValueError:
+        print("  ✗ Please enter a number")
+        return
+
+    generated_texts = []
+    for i in range(min(n_samples, 10)):  # Safety limit
+        prompt = chr(random.randint(97, 122))  # Random lowercase letter
+        cont = generate(prompt, n_bytes=n_bytes_per, temperature=0.8, top_k=20)
+        generated_texts.append(cont)
+        print(f"    Sample {i+1}: {cont[:60]}...")
+
+    original_text = dataset.data.tolist()
+    augmented_bytes = original_text.copy()
+
+    for text in generated_texts:
+        augmented_bytes.extend(list(text.encode('utf-8', errors='ignore')))
+
+    dataset.data = torch.tensor(augmented_bytes, dtype=torch.long)
+    config.data_file = "[augmented with generated text]"
+
+    print(f"\n  ✓ Dataset augmented: {len(augmented_bytes):,} bytes total")
+    print("  You can now retrain the model on this augmented data.")
+    print("  Main Menu → 1 (Train) → Reset and train from scratch")
+
+
+def menu_save():
+    """Save all outputs."""
+    print("\n" + "-"*70)
+    print("SAVE OUTPUTS")
+    print("-"*70)
+
+    if not train_state.loss_history:
+        print("  ⚠ No training data to export")
+        return
+
+    with open("carbide_loss.csv", "w", newline="") as fh:
+        csv.writer(fh).writerows([("step", "loss")] + train_state.loss_history)
+    print("  ✓ carbide_loss.csv")
+
+    plotting.plot_loss()
+    print("  ✓ carbide_loss_live.png")
+
+    if training.model is not None:
+        export_mdbe_table(training.model, "mdbe_table.csv")
+        print("  ✓ mdbe_table.csv")
+
+    print("\n  All outputs saved.")
+
+
+def menu_sft():
+    """Lightweight SFT (fine-tuning) pass on curated prompt/response pairs
+    (task1 Part 3) — continues fine-tuning the already-pretrained model in
+    place, it does not start a fresh one. Loss is masked to response tokens
+    only (see sft.py); run pretraining first."""
+    print("\n" + "-"*70)
+    print("FINE-TUNE (SFT)")
+    print("-"*70)
+
+    if training.model is None or train_state.step == 0:
+        print("  ⚠ Model not pretrained yet. Train first (Main Menu → 1), then fine-tune.")
+        return
+    if train_state.training_active:
+        print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
+        print("    before fine-tuning.")
+        return
+
+    path = input("  SFT examples file (default: sft_data.jsonl): ").strip() or "sft_data.jsonl"
+    if not os.path.exists(path):
+        print(f"  ✗ File not found: {path}")
+        return
+
+    try:
+        examples = sft.load_sft_examples(path)
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"  ✗ Could not parse {path}: {e}")
+        return
+    if not examples:
+        print(f"  ✗ No examples found in {path}")
+        return
+    print(f"  Loaded {len(examples)} prompt/response examples from {path}")
+
+    epochs_in = input("  Epochs (default 5): ").strip()
+    try:
+        epochs = int(epochs_in) if epochs_in else 5
+    except ValueError:
+        print("  ✗ Please enter a number")
+        return
+
+    print(f"\n  Fine-tuning for {epochs} epoch(s) over {len(examples)} examples "
+          f"({epochs * len(examples)} steps)...\n")
+    history = sft.run_sft(examples, epochs=epochs)
+    print(f"\n  ✓ Fine-tuning complete ({len(history)} steps)")
+
+
+def main():
+    print("""
+╔════════════════════════════════════════════════════════════════════════╗
+║                CARBIDE INTERACTIVE CLI                                ║
+║         Byte-Level SSM Language Model with REPL Interface             ║
+║                                                                        ║
+║  Options 2, 3, 4: Load custom datasets!                              ║
+║  • Option 2: Generate text & retrain on augmented data                ║
+║  • Option 3: Load dataset from menu                                   ║
+║  • Option 4: Command-line arg (--data file.txt)                       ║
+╚════════════════════════════════════════════════════════════════════════╝
+""")
+
+    while True:
+        menu_main()
+        choice = input("Choice: ").strip()
+
+        if choice == "1":
+            menu_train()
+        elif choice == "2":
+            menu_repl()
+        elif choice == "3":
+            menu_hyperparams()
+        elif choice == "4":
+            menu_checkpoints()
+        elif choice == "5":
+            menu_mdbe()
+        elif choice == "6":
+            menu_ablation()
+        elif choice == "7":
+            menu_load_dataset()
+        elif choice == "8":
+            menu_save()
+        elif choice == "9":
+            menu_sft()
+        elif choice == "10":
+            if train_state.training_active:
+                print("\n  Background training is still running — stopping it first...")
+                training.stop_background_training()
+            print("\n✓ Goodbye!\n")
+            break
+        else:
+            print("  ✗ Invalid choice")

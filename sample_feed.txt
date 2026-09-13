@@ -1,0 +1,477 @@
+Cats run.
+The dog sat.
+Birds fly south.
+A red truck stopped.
+She opened the door.
+We walked home.
+Rain hit the roof.
+The kettle whistled.
+Kids played outside.
+He read the book.
+The river is wide.
+Leaves fell early.
+The lamp is on.
+They cooked dinner.
+The road was empty.
+A small boat drifted.
+The clock struck ten.
+Frost covered the grass.
+The window was open.
+Someone rang the bell.
+The 12 dogs.
+I have 3 apples.
+Room 101 is locked.
+She is 7 years old.
+Call me at 5551212.
+The year 2026 began.
+There are 4 chairs.
+Bus 22 is late.
+I paid 19 dollars.
+Chapter 8 starts here.
+The 1st prize went unused.
+He finished in 2nd place.
+Meet at 3rd street.
+That is 100 percent.
+Add 2 and 2.
+The code is 007.
+Flight 440 boarded.
+I counted 0 mistakes.
+Page 256 is blank.
+We need 15 more.
+Hello, world.
+Wait!
+Is this done?
+Stop; look; listen.
+Well... maybe.
+He said: leave.
+Quote: be kind.
+(hidden note)
+A, B, and C.
+This-that split.
+End of line.
+What? Why?
+No.
+Yes!
+Hmm.
+Left (and right).
+Item: milk.
+Path / home / work
+One; two; three.
+Done.
+I don't know.
+We can't wait.
+It's fine.
+They're here.
+U.S. maps are old.
+Dr. Smith left.
+Mr. Jones waved.
+The well-known path.
+A six-year-old child.
+hello-world test.
+e-mail is slow.
+The mother-in-law arrived.
+New York-based team.
+I'll be there.
+What's that?
+Could've been worse.
+The ATM ate it.
+NASA launched late.
+The COVID-19 note.
+A DIY shelf.
+hello 😊
+Good job 👍
+The cat 🐱 sat.
+Mix 😊 and text.
+Only 😊
+A café opened.
+ naïve idea
+The piñata broke.
+Straße is a word.
+東京 is far.
+Привет there.
+ñoño test.
+emoji 🔥 end
+two 😊😊 marks
+space    gaps
+tab	here
+  leading space
+trailing space 
+(blank-like: .)
+UPPER CASE LINE
+The quick brown fox jumped over the 13 lazy dogs.
+On 4 July the old truck, rusty and loud, rolled down 3rd street.
+She bought 2 loaves, 1 bottle, and 6 eggs at the store.
+Don't mix U.S. codes with 12-digit tags in one bar.
+If 7 birds land on a wire, the 8th may wait.
+Read pages 10-12 then stop.
+The email is name@site.com and it should split oddly.
+Version 1.2.3 shipped last night.
+He walked 1.5 miles in the rain.
+Put the 9-volt battery in first.
+Sample line 1 has 1 marks.
+Word pack 1: cats dogs birds.
+Number pack 1: 1 2 3.
+Mix pack 1: item-1 ready.
+Sample line 2 has 2 marks.
+Word pack 2: cats dogs birds.
+Number pack 2: 2 3 4.
+Mix pack 2: item-2 ready.
+Sample line 3 has 3 marks.
+Word pack 3: cats dogs birds.
+Number pack 3: 3 4 5.
+Mix pack 3: item-3 ready.
+Sample line 4 has 4 marks.
+Word pack 4: cats dogs birds.
+Number pack 4: 4 5 6.
+Mix pack 4: item-4 ready.
+Sample line 5 has 5 marks.
+Word pack 5: cats dogs birds.
+Number pack 5: 5 6 7.
+Mix pack 5: item-5 ready.
+Sample line 6 has 6 marks.
+Word pack 6: cats dogs birds.
+Number pack 6: 6 7 8.
+Mix pack 6: item-6 ready.
+Sample line 7 has 7 marks.
+Word pack 7: cats dogs birds.
+Number pack 7: 7 8 9.
+Mix pack 7: item-7 ready.
+Sample line 8 has 8 marks.
+Word pack 8: cats dogs birds.
+Number pack 8: 8 9 10.
+Mix pack 8: item-8 ready.
+Sample line 9 has 9 marks.
+Word pack 9: cats dogs birds.
+Number pack 9: 9 10 11.
+Mix pack 9: item-9 ready.
+Sample line 10 has 10 marks.
+Word pack 10: cats dogs birds.
+Number pack 10: 10 11 12.
+Mix pack 10: item-10 ready.
+Sample line 11 has 11 marks.
+Word pack 11: cats dogs birds.
+Number pack 11: 11 12 13.
+Mix pack 11: item-11 ready.
+Sample line 12 has 12 marks.
+Word pack 12: cats dogs birds.
+Number pack 12: 12 13 14.
+Mix pack 12: item-12 ready.
+Sample line 13 has 13 marks.
+Word pack 13: cats dogs birds.
+Number pack 13: 13 14 15.
+Mix pack 13: item-13 ready.
+Sample line 14 has 14 marks.
+Word pack 14: cats dogs birds.
+Number pack 14: 14 15 16.
+Mix pack 14: item-14 ready.
+Sample line 15 has 15 marks.
+Word pack 15: cats dogs birds.
+Number pack 15: 15 16 17.
+Mix pack 15: item-15 ready.
+Sample line 16 has 16 marks.
+Word pack 16: cats dogs birds.
+Number pack 16: 16 17 18.
+Mix pack 16: item-16 ready.
+Sample line 17 has 17 marks.
+Word pack 17: cats dogs birds.
+Number pack 17: 17 18 19.
+Mix pack 17: item-17 ready.
+Sample line 18 has 18 marks.
+Word pack 18: cats dogs birds.
+Number pack 18: 18 19 20.
+Mix pack 18: item-18 ready.
+Sample line 19 has 19 marks.
+Word pack 19: cats dogs birds.
+Number pack 19: 19 20 21.
+Mix pack 19: item-19 ready.
+Sample line 20 has 20 marks.
+Word pack 20: cats dogs birds.
+Number pack 20: 20 21 22.
+Mix pack 20: item-20 ready.
+Sample line 21 has 21 marks.
+Word pack 21: cats dogs birds.
+Number pack 21: 21 22 23.
+Mix pack 21: item-21 ready.
+Sample line 22 has 22 marks.
+Word pack 22: cats dogs birds.
+Number pack 22: 22 23 24.
+Mix pack 22: item-22 ready.
+Sample line 23 has 23 marks.
+Word pack 23: cats dogs birds.
+Number pack 23: 23 24 25.
+Mix pack 23: item-23 ready.
+Sample line 24 has 24 marks.
+Word pack 24: cats dogs birds.
+Number pack 24: 24 25 26.
+Mix pack 24: item-24 ready.
+Sample line 25 has 25 marks.
+Word pack 25: cats dogs birds.
+Number pack 25: 25 26 27.
+Mix pack 25: item-25 ready.
+Sample line 26 has 26 marks.
+Word pack 26: cats dogs birds.
+Number pack 26: 26 27 28.
+Mix pack 26: item-26 ready.
+Sample line 27 has 27 marks.
+Word pack 27: cats dogs birds.
+Number pack 27: 27 28 29.
+Mix pack 27: item-27 ready.
+Sample line 28 has 28 marks.
+Word pack 28: cats dogs birds.
+Number pack 28: 28 29 30.
+Mix pack 28: item-28 ready.
+Sample line 29 has 29 marks.
+Word pack 29: cats dogs birds.
+Number pack 29: 29 30 31.
+Mix pack 29: item-29 ready.
+Sample line 30 has 30 marks.
+Word pack 30: cats dogs birds.
+Number pack 30: 30 31 32.
+Mix pack 30: item-30 ready.
+Sample line 31 has 31 marks.
+Word pack 31: cats dogs birds.
+Number pack 31: 31 32 33.
+Mix pack 31: item-31 ready.
+Sample line 32 has 32 marks.
+Word pack 32: cats dogs birds.
+Number pack 32: 32 33 34.
+Mix pack 32: item-32 ready.
+Sample line 33 has 33 marks.
+Word pack 33: cats dogs birds.
+Number pack 33: 33 34 35.
+Mix pack 33: item-33 ready.
+Sample line 34 has 34 marks.
+Word pack 34: cats dogs birds.
+Number pack 34: 34 35 36.
+Mix pack 34: item-34 ready.
+Sample line 35 has 35 marks.
+Word pack 35: cats dogs birds.
+Number pack 35: 35 36 37.
+Mix pack 35: item-35 ready.
+Sample line 36 has 36 marks.
+Word pack 36: cats dogs birds.
+Number pack 36: 36 37 38.
+Mix pack 36: item-36 ready.
+Sample line 37 has 37 marks.
+Word pack 37: cats dogs birds.
+Number pack 37: 37 38 39.
+Mix pack 37: item-37 ready.
+Sample line 38 has 38 marks.
+Word pack 38: cats dogs birds.
+Number pack 38: 38 39 40.
+Mix pack 38: item-38 ready.
+Sample line 39 has 39 marks.
+Word pack 39: cats dogs birds.
+Number pack 39: 39 40 41.
+Mix pack 39: item-39 ready.
+Sample line 40 has 40 marks.
+Word pack 40: cats dogs birds.
+Number pack 40: 40 41 42.
+Mix pack 40: item-40 ready.
+Sample line 41 has 41 marks.
+Word pack 41: cats dogs birds.
+Number pack 41: 41 42 43.
+Mix pack 41: item-41 ready.
+Sample line 42 has 42 marks.
+Word pack 42: cats dogs birds.
+Number pack 42: 42 43 44.
+Mix pack 42: item-42 ready.
+Sample line 43 has 43 marks.
+Word pack 43: cats dogs birds.
+Number pack 43: 43 44 45.
+Mix pack 43: item-43 ready.
+Sample line 44 has 44 marks.
+Word pack 44: cats dogs birds.
+Number pack 44: 44 45 46.
+Mix pack 44: item-44 ready.
+Sample line 45 has 45 marks.
+Word pack 45: cats dogs birds.
+Number pack 45: 45 46 47.
+Mix pack 45: item-45 ready.
+Sample line 46 has 46 marks.
+Word pack 46: cats dogs birds.
+Number pack 46: 46 47 48.
+Mix pack 46: item-46 ready.
+Sample line 47 has 47 marks.
+Word pack 47: cats dogs birds.
+Number pack 47: 47 48 49.
+Mix pack 47: item-47 ready.
+Sample line 48 has 48 marks.
+Word pack 48: cats dogs birds.
+Number pack 48: 48 49 50.
+Mix pack 48: item-48 ready.
+Sample line 49 has 49 marks.
+Word pack 49: cats dogs birds.
+Number pack 49: 49 50 51.
+Mix pack 49: item-49 ready.
+Sample line 50 has 50 marks.
+Word pack 50: cats dogs birds.
+Number pack 50: 50 51 52.
+Mix pack 50: item-50 ready.
+Sample line 51 has 51 marks.
+Word pack 51: cats dogs birds.
+Number pack 51: 51 52 53.
+Mix pack 51: item-51 ready.
+Sample line 52 has 52 marks.
+Word pack 52: cats dogs birds.
+Number pack 52: 52 53 54.
+Mix pack 52: item-52 ready.
+Sample line 53 has 53 marks.
+Word pack 53: cats dogs birds.
+Number pack 53: 53 54 55.
+Mix pack 53: item-53 ready.
+Sample line 54 has 54 marks.
+Word pack 54: cats dogs birds.
+Number pack 54: 54 55 56.
+Mix pack 54: item-54 ready.
+Sample line 55 has 55 marks.
+Word pack 55: cats dogs birds.
+Number pack 55: 55 56 57.
+Mix pack 55: item-55 ready.
+Sample line 56 has 56 marks.
+Word pack 56: cats dogs birds.
+Number pack 56: 56 57 58.
+Mix pack 56: item-56 ready.
+Sample line 57 has 57 marks.
+Word pack 57: cats dogs birds.
+Number pack 57: 57 58 59.
+Mix pack 57: item-57 ready.
+Sample line 58 has 58 marks.
+Word pack 58: cats dogs birds.
+Number pack 58: 58 59 60.
+Mix pack 58: item-58 ready.
+Sample line 59 has 59 marks.
+Word pack 59: cats dogs birds.
+Number pack 59: 59 60 61.
+Mix pack 59: item-59 ready.
+Sample line 60 has 60 marks.
+Word pack 60: cats dogs birds.
+Number pack 60: 60 61 62.
+Mix pack 60: item-60 ready.
+Sample line 61 has 61 marks.
+Word pack 61: cats dogs birds.
+Number pack 61: 61 62 63.
+Mix pack 61: item-61 ready.
+Sample line 62 has 62 marks.
+Word pack 62: cats dogs birds.
+Number pack 62: 62 63 64.
+Mix pack 62: item-62 ready.
+Sample line 63 has 63 marks.
+Word pack 63: cats dogs birds.
+Number pack 63: 63 64 65.
+Mix pack 63: item-63 ready.
+Sample line 64 has 64 marks.
+Word pack 64: cats dogs birds.
+Number pack 64: 64 65 66.
+Mix pack 64: item-64 ready.
+Sample line 65 has 65 marks.
+Word pack 65: cats dogs birds.
+Number pack 65: 65 66 67.
+Mix pack 65: item-65 ready.
+Sample line 66 has 66 marks.
+Word pack 66: cats dogs birds.
+Number pack 66: 66 67 68.
+Mix pack 66: item-66 ready.
+Sample line 67 has 67 marks.
+Word pack 67: cats dogs birds.
+Number pack 67: 67 68 69.
+Mix pack 67: item-67 ready.
+Sample line 68 has 68 marks.
+Word pack 68: cats dogs birds.
+Number pack 68: 68 69 70.
+Mix pack 68: item-68 ready.
+Sample line 69 has 69 marks.
+Word pack 69: cats dogs birds.
+Number pack 69: 69 70 71.
+Mix pack 69: item-69 ready.
+Sample line 70 has 70 marks.
+Word pack 70: cats dogs birds.
+Number pack 70: 70 71 72.
+Mix pack 70: item-70 ready.
+Sample line 71 has 71 marks.
+Word pack 71: cats dogs birds.
+Number pack 71: 71 72 73.
+Mix pack 71: item-71 ready.
+Sample line 72 has 72 marks.
+Word pack 72: cats dogs birds.
+Number pack 72: 72 73 74.
+Mix pack 72: item-72 ready.
+Sample line 73 has 73 marks.
+Word pack 73: cats dogs birds.
+Number pack 73: 73 74 75.
+Mix pack 73: item-73 ready.
+Sample line 74 has 74 marks.
+Word pack 74: cats dogs birds.
+Number pack 74: 74 75 76.
+Mix pack 74: item-74 ready.
+Sample line 75 has 75 marks.
+Word pack 75: cats dogs birds.
+Number pack 75: 75 76 77.
+Mix pack 75: item-75 ready.
+Sample line 76 has 76 marks.
+Word pack 76: cats dogs birds.
+Number pack 76: 76 77 78.
+Mix pack 76: item-76 ready.
+Sample line 77 has 77 marks.
+Word pack 77: cats dogs birds.
+Number pack 77: 77 78 79.
+Mix pack 77: item-77 ready.
+Sample line 78 has 78 marks.
+Word pack 78: cats dogs birds.
+Number pack 78: 78 79 80.
+Mix pack 78: item-78 ready.
+Sample line 79 has 79 marks.
+Word pack 79: cats dogs birds.
+Number pack 79: 79 80 81.
+Mix pack 79: item-79 ready.
+Sample line 80 has 80 marks.
+Word pack 80: cats dogs birds.
+Number pack 80: 80 81 82.
+Mix pack 80: item-80 ready.
+The shed door stuck after the rain.
+A crow sat on the fence post.
+He tightened the last bolt.
+The radio hissed then cleared.
+She stacked the split wood.
+Night bugs hit the porch light.
+The well pump kicked on.
+Dust hung in the shop air.
+A wrench rolled under the bench.
+The dog drank from the pan.
+Tomorrow looks dry.
+The map was wrong by two miles.
+He marked the tree with chalk.
+The trail forked left.
+We took the lower path.
+A deer stood in the cut.
+The camera battery died.
+Clouds piled on the ridge.
+Thunder stayed far off.
+The tent poles clicked into place.
+Coffee boiled over the rim.
+Someone forgot the matches.
+The river sound covered our talk.
+A truck passed on the fire road.
+Headlights swept the trees.
+Then it was quiet again.
+The compass needle settled.
+We counted three ridges west.
+The pack strap cut a shoulder.
+Tape fixed it for now.
+Stars showed through a hole in cloud.
+No phone bars at all.
+The watch said 2.
+Nobody spoke for a while.
+A stick cracked downslope.
+False alarm.
+The fire was only coals.
+He fed it one dry stick.
+Smoke went straight up.
+That was a good sign.
+Morning would come slow.
+The first bird was a wren.
+Frost on the bag zipper.
+Hands stiff on the cup.
+The plan was simple walk out.
+Maps lie a little.
+Feet know the rest.

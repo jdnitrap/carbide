@@ -1,0 +1,339 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                        CARBIDE FILES INDEX & VERSIONS                         ║
+║                          Master Reference Guide                               ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+OVERVIEW
+══════════════════════════════════════════════════════════════════════════════════
+
+Three Carbide implementations, each with distinct purpose:
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ FILE                             VERSION  TYPE        PURPOSE                   │
+├────────────────────────────────────────────────────────────────────────────────┤
+│ carbide_v1.0_batch.py            1.0      Batch       Train → Generate → Ablation│
+│ carbide_v1.0_demo.py             1.0      Reference   Pure Python, no deps      │
+│ carbide_v2.0_interactive.py      2.0      Interactive Full CLI, REPL, data load│
+└────────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════════
+
+CARBIDE_V1.0_BATCH.PY (Version 1.0 - Batch Mode)
+══════════════════════════════════════════════════════════════════════════════════
+
+File: carbide_v1.0_batch.py
+Lines: 424
+Dependencies: torch, matplotlib
+Requires: GPU preferred (CPU: ~25 min)
+
+Purpose:
+  Original implementation. Batch training → generation → ablation → export.
+  No user interaction. Runs start-to-finish automatically.
+
+Workflow:
+  1. python3 carbide.py
+  2. Trains for 3000 steps (~15 min on CPU)
+  3. Generates sample text
+  4. Runs ablation (3×1500 steps, ~10 min)
+  5. Exports: carbide_loss.png, carbide_loss.csv, carbide_ablation.png, mdbe_table.csv
+  6. Done. Exit.
+
+Use When:
+  ✓ You want a simple, single run
+  ✓ Fire-and-forget training
+  ✓ Baseline comparison
+  ✓ Quick proof-of-concept
+
+Don't Use When:
+  ✗ You want interactive REPL
+  ✗ You need to pause/resume
+  ✗ You want to load custom datasets
+  ✗ You need real-time control
+
+Setup:
+  python3 -m venv carbide_env
+  source carbide_env/bin/activate
+  pip install torch matplotlib
+  python3 carbide_v1.0_batch.py
+
+════════════════════════════════════════════════════════════════════════════════════
+
+CARBIDE_V1.0_DEMO.PY (Version 1.0 - Reference Implementation)
+══════════════════════════════════════════════════════════════════════════════════
+
+File: carbide_v1.0_demo.py
+Lines: 350
+Dependencies: NONE (pure Python)
+Requires: Any Python 3
+
+Purpose:
+  Educational reference. Shows Carbide logic without torch/matplotlib.
+  Instant feedback. Verifies architecture is sound before full training.
+
+Workflow:
+  1. python3 carbide_demo.py
+  2. Shows constraint logic, MDBE embeddings, SSM, training, generation
+  3. Runs ~5 sec. Prints results to terminal.
+  4. Done.
+
+Output:
+  CONSTRAINT EXAMPLE
+  MDBE EMBEDDING
+  SSM FORWARD PASS
+  MOCK TRAINING (5 steps)
+  ABLATION COMPARISON
+  AUTOREGRESSIVE GENERATION
+  MDBE TABLE EXPORT
+
+Use When:
+  ✓ You want instant feedback (no 25 min wait)
+  ✓ You want to understand the architecture
+  ✓ You're on a system without torch
+  ✓ You want to verify logic before committing time
+  ✓ You're teaching/explaining Carbide
+
+Don't Use When:
+  ✗ You want real trained model
+  ✗ You need actual gradients
+  ✗ You want to generate quality text
+
+Setup:
+  python3 carbide_v1.0_demo.py
+  (That's it. No dependencies.)
+
+════════════════════════════════════════════════════════════════════════════════════
+
+CARBIDE_V2.0_INTERACTIVE.PY (Version 2.0 - Interactive CLI)
+══════════════════════════════════════════════════════════════════════════════════
+
+File: carbide_v2.0_interactive.py
+Lines: 770
+Dependencies: torch, matplotlib
+Requires: GPU preferred (CPU: varies by workflow)
+
+Purpose:
+  Full-featured interactive CLI with REPL, data loading, checkpoints.
+  Build, iterate, experiment. Maximum control and flexibility.
+
+Features:
+  ✓ Interactive menu (8 options)
+  ✓ REPL mode (type prompts → get continuations live)
+  ✓ Train control (start/pause/resume)
+  ✓ Hyperparameter tuning (d_model, n_layers, d_state, batch_size, lr)
+  ✓ Checkpoints (save/load mid-training)
+  ✓ Real-time loss plotting
+  ✓ Ablation study selector
+  ✓ MDBE embedding inspection
+  ✓ Data loading (3 options: menu, command-line, generate & augment)
+
+Workflow:
+  1. python3 carbide_interactive.py [--data file.txt]
+  2. Main Menu appears
+  3. Choose from 9 options interactively
+  4. Train, REPL, inspect, save, load, etc.
+  5. Full control over all parameters
+
+Data Loading Options:
+  Option 1: train.txt (auto-detect)
+  Option 2: Generate & retrain (augment dataset with model outputs)
+  Option 3: Load from menu (choose file interactively)
+  Option 4: Command-line arg (--data file.txt)
+
+Example Session:
+  python3 carbide_interactive.py --data my_essays.txt
+  Main Menu → 1 (Train) → 1000 steps
+  Main Menu → 2 (REPL) → type "the cat" → get continuation
+  Main Menu → 7 (Load dataset) → switch to different file
+  Main Menu → 4 (Checkpoints) → save progress
+  Main Menu → 8 (Save) → export all outputs
+  Main Menu → 9 (Exit)
+
+Use When:
+  ✓ You want interactive control
+  ✓ You need to pause/resume training
+  ✓ You want to experiment with hyperparams
+  ✓ You want real-time text generation (REPL)
+  ✓ You want to load custom datasets
+  ✓ You want checkpoints for long training
+  ✓ You want to iterate and refine
+
+Don't Use When:
+  ✗ You want fire-and-forget simplicity
+  ✗ You don't have torch/matplotlib
+  ✗ You just want to verify logic (use demo.py)
+
+Setup:
+  python3 -m venv carbide_env
+  source carbide_env/bin/activate
+  pip install torch matplotlib
+  python3 carbide_v2.0_interactive.py [--data file.txt]
+
+════════════════════════════════════════════════════════════════════════════════════
+
+QUICK DECISION TREE
+══════════════════════════════════════════════════════════════════════════════════
+
+Do you have torch installed?
+  ├─ NO
+  │  └─ Use: carbide_v1.0_demo.py (instant, no setup)
+  │
+  └─ YES
+     Do you want interactive control?
+       ├─ NO
+       │  └─ Use: carbide_v1.0_batch.py (simple batch training)
+       │
+       └─ YES
+          └─ Use: carbide_v2.0_interactive.py (full control + REPL)
+
+Want to load custom text?
+  ├─ NO
+  │  └─ Any version works
+  │
+  └─ YES
+     └─ Use: carbide_v2.0_interactive.py (Options 2, 3, 4)
+
+Short on time? (<30 seconds)
+  └─ Use: carbide_v1.0_demo.py
+
+Have time? (20-30 minutes)
+  └─ Use: carbide_v1.0_batch.py or carbide_v2.0_interactive.py
+
+════════════════════════════════════════════════════════════════════════════════════
+
+ARCHITECTURE (All Versions)
+══════════════════════════════════════════════════════════════════════════════════
+
+All three versions share the same core architecture:
+
+Input:
+  Raw UTF-8 text → bytes (0-255)
+
+MDBE (Mechanically Defined Byte Embedding):
+  • 256-row learned embedding (64 dims per byte)
+  • 6 rule-based constraints per byte:
+    - is_alphabetic (A-Z, a-z)
+    - is_digit (0-9)
+    - is_uppercase (A-Z)
+    - is_punctuation (!-/, :-, etc.)
+    - is_whitespace (space, tab, newline, CR)
+    - utf8_lead (UTF-8 lead byte indicator)
+  • Linear projection (64+6 → 64)
+
+SSM Blocks (×n_layers, default=2):
+  • Selective Scan state evolution
+  • Pre-norm residual connection
+  • State dimension: d_state (default=16)
+
+Output Head:
+  • Linear(64 → 256) logits
+  • Cross-entropy loss on next-byte prediction
+
+Training:
+  • Optimizer: AdamW (lr=3e-3)
+  • Gradient clipping: 1.0
+  • Default: 3000 steps, batch_size=1, seq_len=128
+
+Ablation:
+  • Mode A: full (constraints on)
+  • Mode B: no_constraints (constraints zeroed)
+  • Mode C: plain_embedding (skip projection)
+
+════════════════════════════════════════════════════════════════════════════════════
+
+REFERENCE DOCUMENTATION
+══════════════════════════════════════════════════════════════════════════════════
+
+File                              | Purpose
+──────────────────────────────────┼──────────────────────────────────────
+CARBIDE_FILES_INDEX.txt          | This file — version overview
+CARBIDE_INTERACTIVE_GUIDE.txt    | CLI usage, menus, workflows
+DATA_LOADING_GUIDE.txt           | Options 2, 3, 4 explained
+LOGIC_TEST_REPORT.txt            | Architecture verification
+MDBE_EMBEDDED_TABLE.txt          | Constraint encoding details
+
+════════════════════════════════════════════════════════════════════════════════════
+
+FILE SIZES & SPECS
+══════════════════════════════════════════════════════════════════════════════════
+
+File                          | Size   | Lines | Dependencies      | Runtime (CPU)
+──────────────────────────────┼────────┼───────┼───────────────────┼──────────────
+carbide_v1.0_batch.py         | 14 KB  | 424   | torch, matplotlib | 25 min
+carbide_v1.0_demo.py          | 12 KB  | 350   | (none)            | 5 sec
+carbide_v2.0_interactive.py   | 27 KB  | 770   | torch, matplotlib | varies
+
+════════════════════════════════════════════════════════════════════════════════════
+
+VERSION HISTORY
+══════════════════════════════════════════════════════════════════════════════════
+
+carbide_v1.0_batch.py:
+  • Original batch implementation
+  • No changes planned
+
+carbide_v1.0_demo.py:
+  • Pure Python reference
+  • No changes planned
+
+carbide_v2.0_interactive.py:
+  • Initial interactive version
+  • Added: CLI menu, REPL, checkpoints, hyperparams, MDBE inspection
+  • Added: Data loading (Options 2, 3, 4)
+  • Status: Production ready
+
+════════════════════════════════════════════════════════════════════════════════════
+
+FUTURE VERSIONS (Planned, Not Yet Implemented)
+══════════════════════════════════════════════════════════════════════════════════
+
+• Browser-based UI (Gradio/Streamlit wrapper)
+• Alternative SSM designs (larger d_state, different A initialization)
+• Batch size experiments and tuning suggestions
+• GPU acceleration (CUDA support)
+• Extended generation (beam search, temperature scheduling)
+• Model compression/quantization
+
+════════════════════════════════════════════════════════════════════════════════════
+
+COMMON QUESTIONS
+══════════════════════════════════════════════════════════════════════════════════
+
+Q: Which version should I start with?
+A: If you have torch: carbide_v2.0_interactive.py
+   If you don't: carbide_v1.0_demo.py
+
+Q: Can I use carbide_v1.0_batch.py to load custom text?
+A: No. Create train.txt in the same folder, or use carbide_v2.0_interactive.py
+
+Q: Does carbide_v1.0_demo.py generate real output?
+A: No, it's simplified/mocked. For real training, use carbide_v1.0_batch.py or 
+   carbide_v2.0_interactive.py with torch.
+
+Q: Can I run carbide_v2.0_interactive.py without torch?
+A: No, the interactive version requires torch for actual training. Use 
+   carbide_v1.0_demo.py for instant feedback without dependencies.
+
+Q: How do I switch between versions?
+A: They're independent files. Run whichever you want:
+   python3 carbide_v1.0_batch.py
+   python3 carbide_v1.0_demo.py
+   python3 carbide_v2.0_interactive.py
+
+Q: Do I need to install all three?
+A: No. Pick one based on your needs. All three are self-contained.
+
+════════════════════════════════════════════════════════════════════════════════════
+
+SUMMARY
+══════════════════════════════════════════════════════════════════════════════════
+
+FILE                       VERSION  PURPOSE                  WHEN TO USE
+──────────────────────────────────────────────────────────────────────────
+carbide_v1.0_batch.py      1.0      Batch training only      Simple, no interaction
+carbide_v1.0_demo.py       1.0      Reference, instant       Quick feedback, no torch
+carbide_v2.0_interactive.py 2.0     Full interactive CLI     Exploration, control, REPL
+
+All share the same Carbide architecture (MDBE + SSM + byte classification).
+Each is a complete, standalone implementation.
+
+════════════════════════════════════════════════════════════════════════════════════

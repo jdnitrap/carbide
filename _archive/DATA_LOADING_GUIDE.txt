@@ -1,0 +1,306 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                     CARBIDE DATA LOADING — OPTIONS 2, 3, 4                     ║
+║                    Three ways to inject text for learning                      ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+You now have THREE ways to load custom datasets:
+
+OPTION 1: Simple File (train.txt)
+══════════════════════════════════════════════════════════════════════════════════
+
+Just create a `train.txt` file in the same folder:
+
+  cat > train.txt << 'EOF'
+  Your custom text here
+  Multiple lines
+  As much as you want
+  EOF
+
+Then run:
+
+  python3 carbide_interactive.py
+
+The script auto-detects train.txt and loads it. No code changes needed.
+
+✓ Pros: Simplest, no commands
+✗ Cons: Have to manage file manually
+
+════════════════════════════════════════════════════════════════════════════════════
+
+OPTION 2: Generate Text & Retrain (Self-Amplification)
+══════════════════════════════════════════════════════════════════════════════════
+
+**After the model learns from initial data, generate new text from it and retrain
+on the augmented dataset (learn from your own outputs).**
+
+Workflow:
+─────────
+1. Train model on initial data (500-1000 steps)
+2. Main Menu → 7 (Load dataset)
+3. Choose "4. Generate text from model & retrain on it"
+4. Answer prompts:
+     "How many samples to generate? (1-10)"        → e.g., 5
+     "Bytes per sample? (50-500)"                  → e.g., 200
+5. Model generates 5 samples of 200 bytes each
+6. Dataset is augmented: [original + generated]
+7. Main Menu → 1 (Train) → Reset and train from scratch
+8. Retrain on augmented data (model learns patterns it discovered)
+
+Example Output:
+───────────────
+  ✓ Dataset augmented: 65,000 bytes total
+  (was 50,000 bytes, now includes 5 generated samples)
+
+Use Case:
+─────────
+• Bootstrap learning: train on small corpus → generate → retrain on larger
+• Creative text: generate variations → mix with original → retrain for diversity
+• Data scarcity: limited training data? Augment it with model-generated text
+
+✓ Pros: Adaptive, self-reinforcing learning
+✗ Cons: Can amplify model bias if not careful (garbage in → garbage out)
+
+════════════════════════════════════════════════════════════════════════════════════
+
+OPTION 3: Load from Menu (Interactive)
+══════════════════════════════════════════════════════════════════════════════════
+
+**Load any dataset interactively without restarting.**
+
+Workflow:
+─────────
+1. Run: python3 carbide_interactive.py
+2. Main Menu → 7 (Load dataset)
+3. Choose:
+     "1. Load from file path"      → Enter full path to any .txt file
+     "2. Use fallback sample"      → Switch back to built-in sample
+     "3. Use train.txt (if exists)" → Auto-detect train.txt
+     "4. Generate & retrain"       → (Option 2, see above)
+
+Example:
+────────
+  Main Menu → 7 (Load dataset)
+  Choice: 1
+  File path: /home/user/my_essays.txt
+  ✓ Loaded /home/user/my_essays.txt (45,000 chars, 55,000 bytes)
+
+Now you can:
+  • Train on my_essays.txt for a while
+  • Load a different dataset mid-training
+  • Switch between datasets without restarting
+
+✓ Pros: No command-line knowledge needed, flexible
+✗ Cons: Need to know file paths
+
+════════════════════════════════════════════════════════════════════════════════════
+
+OPTION 4: Command-Line Argument
+══════════════════════════════════════════════════════════════════════════════════
+
+**Specify dataset when launching, no interactive menu needed.**
+
+Syntax:
+───────
+  python3 carbide_interactive.py --data <path>
+
+Examples:
+─────────
+  python3 carbide_interactive.py --data my_text.txt
+  python3 carbide_interactive.py --data /home/user/documents/novel.txt
+  python3 carbide_interactive.py --data ../data/training_corpus.txt
+
+Output:
+───────
+  ✓ Loaded my_text.txt (125,000 chars)
+  ✓ 156,000 bytes total
+  
+  CARBIDE INTERACTIVE CLI
+  Dataset: my_text.txt (156,000 bytes)
+  ...
+
+Then train normally:
+  Main Menu → 1 (Train) → Train N steps → 1000
+
+✓ Pros: Reproducible, scriptable, no navigation needed
+✗ Cons: Need terminal familiarity
+
+════════════════════════════════════════════════════════════════════════════════════
+
+COMPARISON TABLE
+══════════════════════════════════════════════════════════════════════════════════
+
+Option  | Method              | Launch Command              | When to Use
+────────┼─────────────────────┼─────────────────────────────┼────────────────────
+  1     | train.txt file      | python3 carbide_interactive.py | Default/quick start
+  2     | Generate & retrain  | (menu choice after training)    | Augment limited data
+  3     | Load from menu      | python3 carbide_interactive.py | Switch datasets mid-session
+  4     | Command-line arg    | python3 carbide_interactive.py --data file.txt | Scripting/automation
+
+════════════════════════════════════════════════════════════════════════════════════
+
+STEP-BY-STEP EXAMPLES
+══════════════════════════════════════════════════════════════════════════════════
+
+EXAMPLE 1: Load a book chapter (Option 4)
+──────────────────────────────────────────
+
+File: chapter1.txt (10,000 words about science)
+
+Terminal:
+  python3 carbide_interactive.py --data chapter1.txt
+
+Output:
+  ✓ Loaded chapter1.txt (45,000 chars)
+  ✓ 58,000 bytes total
+  
+Menu:
+  1. Train 1000 steps
+  2. REPL → type "the" → model generates science text
+  3. Save outputs → carbide_loss.csv, mdbe_table.csv
+
+───────────────────────────────────────────────────────────────────────────────
+
+EXAMPLE 2: Mix training data then augment (Option 3 + 2)
+──────────────────────────────────────────────────────────
+
+Start with small dataset:
+  python3 carbide_interactive.py
+
+Terminal:
+  CARBIDE INTERACTIVE CLI
+  Dataset: [fallback] (3,000 bytes)
+
+Menu:
+  1. Train 500 steps (3,000 bytes)
+  2. Main Menu → 7 (Load dataset)
+     Choice: 1
+     File path: my_essays.txt
+     ✓ Loaded my_essays.txt (25,000 bytes)
+  3. Train 500 more steps on essays
+  4. Main Menu → 7 (Load dataset)
+     Choice: 4 (Generate & retrain)
+     Samples: 5, Bytes: 200
+     ✓ Dataset augmented: 30,000 bytes total
+  5. Main Menu → 1 (Train) → Reset and train 1000 steps
+     (Trains on original + generated text)
+  6. Main Menu → 2 (REPL) → explore what model learned
+  7. Main Menu → 8 (Save) → export results
+
+───────────────────────────────────────────────────────────────────────────────
+
+EXAMPLE 3: Batch processing multiple texts (Option 4)
+────────────────────────────────────────────────────────
+
+For loop to train on 3 different datasets:
+
+  for file in essay1.txt essay2.txt essay3.txt; do
+    python3 carbide_interactive.py --data $file
+    # (would need to script the menu interactions)
+  done
+
+Or simpler: train on combined file
+
+  cat essay1.txt essay2.txt essay3.txt > all_essays.txt
+  python3 carbide_interactive.py --data all_essays.txt
+
+════════════════════════════════════════════════════════════════════════════════════
+
+FILE REQUIREMENTS
+══════════════════════════════════════════════════════════════════════════════════
+
+Supported formats:
+  • .txt files (plain text, any encoding)
+  • Large files (10 MB+) supported
+  • UTF-8 preferred (but errors ignored gracefully)
+
+Minimal file:
+  1 byte → works, but too small to train meaningfully
+  
+Recommended:
+  10,000+ bytes (minimum for useful training)
+  100,000+ bytes (good for variety)
+
+Maximum file size:
+  Limited by system RAM (your ASUS ZenBook has 32GB)
+  Typically: 100 MB+ is fine
+
+Example file sizes:
+  • Short story: 50 KB
+  • Novel chapter: 300 KB
+  • Entire book: 1-5 MB
+  • Combined corpus: 10+ MB
+
+════════════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+══════════════════════════════════════════════════════════════════════════════════
+
+Problem: "File not found: my_file.txt"
+Solution: 
+  • Check file exists: ls my_file.txt
+  • Use full path: python3 carbide_interactive.py --data /home/user/my_file.txt
+  • Current directory: python3 carbide_interactive.py --data ./my_file.txt
+
+Problem: "No data loaded, using fallback"
+Solution: 
+  • Did file load successfully? Check output message
+  • Try Option 3: Main Menu → 7 → choice 3
+  • Verify file is readable: cat my_file.txt | head
+
+Problem: Model trained but "Generate & retrain" says "Model not trained yet"
+Solution:
+  • You need at least 1 step of training first
+  • Main Menu → 1 (Train) → Train N steps → 100 (minimum)
+  • Then Main Menu → 7 → choice 4
+
+Problem: Augmented dataset is too small
+Solution:
+  • Increase number of samples: 5 → 10
+  • Increase bytes per sample: 200 → 500
+  • Generate multiple times: run Option 2 repeatedly
+
+════════════════════════════════════════════════════════════════════════════════════
+
+WORKFLOW RECOMMENDATIONS
+══════════════════════════════════════════════════════════════════════════════════
+
+For Quick Testing:
+  1. Option 4: python3 carbide_interactive.py --data test.txt
+  2. Train 500 steps
+  3. REPL mode
+  4. Exit
+
+For Learning-Focused:
+  1. Option 4: python3 carbide_interactive.py --data training_data.txt
+  2. Train 2000 steps
+  3. Option 2: Generate 5 samples
+  4. Reset and train 1000 more on augmented data
+  5. Run ablation
+  6. Save outputs
+
+For Production:
+  1. train.txt (Option 1): Set up once
+  2. Option 3 in menu: Switch datasets as needed
+  3. Checkpoints (Option 4): Save frequently
+  4. Batch training: script multiple runs
+
+════════════════════════════════════════════════════════════════════════════════════
+
+SUMMARY
+══════════════════════════════════════════════════════════════════════════════════
+
+You can now load text in 3 ways:
+
+✓ Option 2: Generate text from trained model → retrain on augmented data
+✓ Option 3: Load any dataset from menu (interactive)
+✓ Option 4: Command-line argument (--data file.txt)
+
+All integrate with training, REPL, and checkpoint system.
+
+Start with Option 4 for simplicity:
+
+  python3 carbide_interactive.py --data my_text.txt
+
+Then train and explore!
+
+════════════════════════════════════════════════════════════════════════════════════
