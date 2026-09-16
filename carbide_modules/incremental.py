@@ -15,7 +15,9 @@ the naive per-step reference in test_scan.py.
 import torch
 import torch.nn.functional as F
 
-from .mdbe import mdbe_constraints
+from .mdbe import all_constraints, _MAX_LOOKBACK, _CLAUSE_LOOKBACK
+
+_HISTORY_LOOKBACK = max(_MAX_LOOKBACK, _CLAUSE_LOOKBACK)
 
 
 class IncrementalState:
@@ -26,11 +28,21 @@ class IncrementalState:
         conv_kernel = model.local_conv.kernel_size
         self.h = [torch.zeros(1, d_model, d_state) for _ in range(n_layers)]
         self.conv_buffer = torch.zeros(1, d_model, conv_kernel - 1)
+        # Real bytes already emitted, bounded to _HISTORY_LOOKBACK (the
+        # longer of: the longest hardcoded word/connective the word-level
+        # columns match against, or mdbe._CLAUSE_LOOKBACK -- the sentence-
+        # scale window _clause_scan needs to correctly re-derive "has this
+        # sentence had a verb yet" / "what was the previous word"). Same
+        # idea as conv_buffer above, just for
+        # mdbe.language_mechanics_constraints()'s lookback instead of
+        # LocalByteConv's.
+        self.byte_history = []
 
     def clone(self):
         s = IncrementalState.__new__(IncrementalState)
         s.h = [h.clone() for h in self.h]
         s.conv_buffer = self.conv_buffer.clone()
+        s.byte_history = list(self.byte_history)
         return s
 
 
@@ -38,9 +50,11 @@ class IncrementalState:
 def incremental_step(model, byte_x: int, state: IncrementalState):
     """Returns (logits for the byte AFTER byte_x, updated state)."""
     bt = torch.tensor([[byte_x]])
+    history = torch.tensor([state.byte_history]) if state.byte_history else None
     learned = model.mdbe.base(bt)
-    cols = mdbe_constraints(bt)
+    cols = all_constraints(bt, history=history)
     emb = model.mdbe.proj(torch.cat([learned, cols], dim=-1))
+    state.byte_history = (state.byte_history + [byte_x])[-(_HISTORY_LOOKBACK - 1):]
 
     conv_in = torch.cat([state.conv_buffer, emb.transpose(1, 2)], dim=-1)
     conv_out = model.local_conv.conv(conv_in)

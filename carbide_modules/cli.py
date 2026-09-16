@@ -16,6 +16,8 @@ from . import plotting
 from . import sft
 from .generation import generate
 from .mdbe import Carbide, export_mdbe_table, MODES
+from .trace_weights import export_weight_trace_table, export_full_table, used_bytes_from_corpus
+from . import discover_dimension
 
 
 def menu_main():
@@ -35,8 +37,124 @@ MAIN MENU:
   7. Load dataset         [NEW: Option 2, 3]
   8. Save outputs
   9. Fine-tune (SFT)      [task1 Part 3]
-  10. Exit
+  10. Discover new dimensions
+  11. Exit
+
+  Type 'help' (or a number, then 'help') any time for what each option does.
 """)
+
+
+HELP_TEXT = """
+CARBIDE — WHAT EACH MENU OPTION ACTUALLY DOES
+--------------------------------------------------------------------
+  1. Train model
+     Starts/controls training. Choose N steps, watch it live or run it
+     in the background. Every {interval} steps it AUTOMATICALLY writes
+     a snapshot pair to mdbe_snapshots/ (mdbe_table_stepN.csv +
+     weight_trace_stepN.csv) — this happens with no action from you.
+     "Reset and train from scratch" wipes step count and starts a new
+     model; "Resume from checkpoint" continues an existing one.
+
+  2. REPL
+     Type a prompt, get a generated continuation from the CURRENT
+     in-memory model. :temp / :topk adjust sampling. Nothing is saved
+     here — it's for trying the model out, not for producing files.
+
+  3. Hyperparameters
+     Edit d_model/n_layers/d_state/batch_size/learning_rate for the
+     NEXT model. Changing d_model/n_layers/d_state discards the current
+     in-memory model (it must be rebuilt at the new size) — save a
+     checkpoint first if you want to keep it.
+
+  4. Checkpoints
+     Save/load/list the actual trained weights, as .pt files in
+     {ckpt_dir}/. This is the ONLY thing that preserves a trained model
+     across restarting the CLI — training itself only lives in memory
+     until you save a checkpoint here (or hit Save outputs for the
+     CSV/PNG reports, which is a separate, smaller thing — see 8).
+
+  5. Inspect MDBE embeddings
+     Quick look at a handful of sample bytes' first 8 learned embedding
+     dimensions, printed to the terminal. Nothing saved to disk — for
+     mdbe_table.csv/weight_trace.csv with every byte and every
+     dimension, use option 8.
+
+  6. Run ablation study
+     Trains 3 throwaway models (full constraints / no constraints /
+     plain embedding) for comparison, writes carbide_ablation.png. Does
+     NOT touch your real in-training model or its checkpoint.
+
+  7. Load dataset
+     Switch which text file training reads from. Options 3 ("fallback")
+     and 5 ("augmented") set a PLACEHOLDER dataset name, not a real
+     file path — that's fine for training, but weight_trace's
+     used-bytes-only correlation mode is automatically skipped in that
+     case (it needs a real file to read).
+
+  8. Save outputs
+     Writes everything to the current directory in one pass:
+       - carbide_loss.csv          (this session's raw loss log)
+       - carbide_loss_live.png     (this session's loss curve)
+       - carbide_telemetry.png     (loss + REAL embedding<->constraint
+                                     correlation trend, across every run
+                                     recorded in mdbe_snapshots/ — this
+                                     is what tells you if the model is
+                                     learning or memorizing)
+       - mdbe_table.csv            (all 256 bytes x every hand-given
+                                     constraint column, current model)
+       - weight_trace.csv          (every embedding dimension's real
+                                     top-3 correlated constraint + weight)
+       - full_table.csv            (everything above, ONE table: all 88
+                                     constraint columns + all 256 embedding
+                                     dims, each embedding column real-named
+                                     and traced, never "cell_N")
+       - embedding_dimension_names.json (the real names/traces full_table's
+                                     embedding columns use, on their own)
+     None of this touches the checkpoint — save one separately (4) if
+     you want to keep the trained weights, not just the reports.
+
+  9. Fine-tune (SFT)
+     Continues training the CURRENT model on curated prompt/response
+     pairs from a .jsonl file (default sft_data.jsonl), loss masked to
+     the response only. Requires a model already pretrained (option 1).
+
+  10. Discover new dimensions
+     Mines a real corpus for words with no hand-given part-of-speech
+     category, clusters them by real shared context, and auto-names
+     each cluster (see discover_dimension.py) — fully automatic, no
+     naming step for you to do. Saved to discovered_dimensions.json.
+     Does NOT touch the current in-memory model or checkpoint — takes
+     effect only after you exit and restart (see the note below), and
+     an existing checkpoint will need migrating (Checkpoints menu) or
+     a fresh model to actually use what it finds.
+
+  11. Exit
+     Stops any background training and quits. Anything not explicitly
+     saved (4 or 8) is lost — the CLI does not auto-save on exit.
+
+  discovered_dimensions.json (not a menu option, runs from a script —
+  see carbide_modules/discover_dimension.py) lets Carbide propose and
+  NAME new constraint columns for itself from real corpus data, fully
+  automatically. A newly discovered dimension only takes effect for a
+  model built AFTER it's been written and the process restarted (Python
+  has already fixed the current model's layer sizes) — and an OLD
+  checkpoint saved before the new dimension existed will fail a normal
+  load into the new, wider model (real shape mismatch, not a bug).
+  Checkpoints menu → Load checkpoint (or Resume from checkpoint) will
+  offer to MIGRATE it when that happens: every already-learned weight
+  is kept exactly, the new dimension's weights start at a real,
+  honest 0.0 (not a guess) and need fresh training exposure to become
+  useful — this is the only way to keep a trained model's prior
+  learning instead of starting over from scratch after a discovery.
+--------------------------------------------------------------------
+"""
+
+
+def menu_help():
+    """Prints HELP_TEXT with the real, current config values substituted in
+    (not hardcoded, so it never drifts from actual settings)."""
+    print(HELP_TEXT.replace("{interval}", str(config.mdbe_snapshot_interval))
+                    .replace("{ckpt_dir}", config.checkpoint_dir))
 
 
 def menu_train():
@@ -136,7 +254,20 @@ def reset_and_train():
 def resume_training():
     """Resume from checkpoint."""
     suffix = input("  Checkpoint suffix (default blank): ").strip()
-    if training.load_checkpoint(f"_{suffix}" if suffix else ""):
+    real_suffix = f"_{suffix}" if suffix else ""
+    filename = f"{config.checkpoint_dir}/carbide_ckpt{real_suffix}.pt"
+    file_exists = os.path.exists(filename)
+    loaded = training.load_checkpoint(real_suffix)  # prints "not found" itself if missing
+    if not loaded and file_exists:
+        # The file exists but a normal load failed -- load_checkpoint()
+        # already printed why (shape mismatch = a new discovered
+        # dimension since this was saved). Ask before migrating, since
+        # it means starting the new dimension(s) at 0.0/untrained.
+        ans = input("  Migrate it to the current constraint schema and continue? "
+                     "New dimension(s) start untrained. [y/N]: ").strip().lower()
+        if ans == "y":
+            loaded = training.load_checkpoint(real_suffix, allow_migrate=True)
+    if loaded:
         try:
             n = int(input("  Additional steps to run: "))
         except ValueError:
@@ -269,7 +400,15 @@ def menu_checkpoints():
             print("    before loading a checkpoint. Saving is fine while training runs.")
             return
         suffix = input("  Suffix to load: ").strip()
-        training.load_checkpoint(f"_{suffix}" if suffix else "")
+        real_suffix = f"_{suffix}" if suffix else ""
+        filename = f"{config.checkpoint_dir}/carbide_ckpt{real_suffix}.pt"
+        file_exists = os.path.exists(filename)
+        loaded = training.load_checkpoint(real_suffix)
+        if not loaded and file_exists:
+            ans = input("  Migrate it to the current constraint schema? "
+                        "New dimension(s) start untrained. [y/N]: ").strip().lower()
+            if ans == "y":
+                training.load_checkpoint(real_suffix, allow_migrate=True)
     elif choice == "3":
         pass  # Already listed above
 
@@ -480,9 +619,19 @@ def menu_save():
     plotting.plot_loss()
     print("  ✓ carbide_loss_live.png")
 
+    plotting.plot_telemetry()
+
     if training.model is not None:
         export_mdbe_table(training.model, "mdbe_table.csv")
         print("  ✓ mdbe_table.csv")
+
+        used_bytes = used_bytes_from_corpus(config.data_file) if config.data_file and os.path.exists(config.data_file) else None
+        export_weight_trace_table(training.model, "weight_trace.csv", byte_values=used_bytes)
+        print("  ✓ weight_trace.csv")
+
+        export_full_table(training.model, "full_table.csv", byte_values=used_bytes)
+        print("  ✓ full_table.csv (constraints + real-named embedding dims, one table)")
+        print("  ✓ embedding_dimension_names.json (real name + traced constraint for every embedding dim)")
 
     print("\n  All outputs saved.")
 
@@ -532,6 +681,51 @@ def menu_sft():
     print(f"\n  ✓ Fine-tuning complete ({len(history)} steps)")
 
 
+def menu_discover():
+    """Runs discover_dimension.discover() against a real corpus from the
+    menu instead of a hand-written script — same mining/clustering/
+    auto-naming pipeline, same discovered_dimensions.json output.
+    Purely additive: never touches the live model or any checkpoint."""
+    print("\n" + "-"*70)
+    print("DISCOVER NEW DIMENSIONS")
+    print("-"*70)
+
+    default_path = config.data_file if config.data_file and os.path.exists(config.data_file) else None
+    prompt = (f"  Corpus file to mine (default: {default_path}): " if default_path
+              else "  Corpus file to mine: ")
+    path = input(prompt).strip() or default_path
+    if not path or not os.path.exists(path):
+        print(f"  ✗ File not found: {path}")
+        return
+
+    try:
+        raw = input("  Minimum word frequency (default 50): ").strip()
+        min_freq = int(raw) if raw else 50
+        raw = input("  Minimum cluster size (default 10): ").strip()
+        min_cluster = int(raw) if raw else 10
+    except ValueError:
+        print("  ✗ Please enter a number")
+        return
+
+    print(f"\n  Mining {path} ...\n")
+    results = discover_dimension.discover(path, min_freq=min_freq, min_cluster_size=min_cluster)
+
+    if not results:
+        print("  No clusters met these thresholds (nothing new confirmed) — "
+              "try lowering min frequency/cluster size.")
+        return
+
+    print(f"  ✓ {len(results)} dimension(s) confirmed and saved to discovered_dimensions.json:\n")
+    for r in results:
+        sample = ", ".join(r["words"][:8])
+        print(f"    {r['dimension_name']} -> {r['value_name']} ({len(r['words'])} words): {sample}...")
+
+    print("\n  ⚠ This takes effect only after you exit and restart the program — the")
+    print("    running model's layer sizes are already fixed. An existing checkpoint")
+    print("    saved before this will need migrating (Checkpoints menu) or a fresh")
+    print("    model to actually use what was just found.")
+
+
 def main():
     print("""
 ╔════════════════════════════════════════════════════════════════════════╗
@@ -549,7 +743,9 @@ def main():
         menu_main()
         choice = input("Choice: ").strip()
 
-        if choice == "1":
+        if choice.lower() in ("help", "h", "?"):
+            menu_help()
+        elif choice == "1":
             menu_train()
         elif choice == "2":
             menu_repl()
@@ -568,6 +764,8 @@ def main():
         elif choice == "9":
             menu_sft()
         elif choice == "10":
+            menu_discover()
+        elif choice == "11":
             if train_state.training_active:
                 print("\n  Background training is still running — stopping it first...")
                 training.stop_background_training()

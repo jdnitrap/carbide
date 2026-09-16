@@ -3,3 +3,14 @@ __pycache__/
 .claude/
 carbide_checkpoints/*
 !carbide_checkpoints/.gitkeep
+
+# Per-run training artifacts -- regenerated differently every run, not
+# meant to be a stable checked-in reference (unlike mdbe_table.csv/
+# weight_trace.csv/full_table.csv, which document the current SCHEMA
+# and are worth tracking).
+mdbe_snapshots/
+carbide_loss.csv
+carbide_loss_live.png
+carbide_telemetry.png
+carbide_ablation.png
+*.bak

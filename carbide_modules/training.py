@@ -15,7 +15,8 @@ from .config import config
 from .state import train_state
 from . import dataset
 from . import monitor
-from .mdbe import Carbide, export_mdbe_table
+from .mdbe import Carbide, export_mdbe_table, migrate_checkpoint_state_dict, CONSTRAINT_COLUMN_NAMES
+from .trace_weights import export_weight_trace_table, used_bytes_from_corpus
 
 model = None
 opt = None
@@ -25,10 +26,17 @@ def _maybe_snapshot_mdbe(step):
     """task1 refinement #4: periodic MDBE-table snapshot during training,
     not just the one-shot export in Save Outputs — lets you check whether
     same-class bytes actually drift closer together in embedding space over
-    training rather than assuming it."""
+    training rather than assuming it. Also snapshots the weight-trace table
+    (trace_weights.py) alongside it, same interval, same reasoning: lets
+    you check whether hidden dimensions actually converge onto a
+    consistent, meaningful constraint label over training, rather than
+    just asserting it once at the end."""
     if step % config.mdbe_snapshot_interval == 0:
         path = f"{config.mdbe_snapshot_dir}/mdbe_table_step{step}.csv"
         export_mdbe_table(model, path)
+        trace_path = f"{config.mdbe_snapshot_dir}/weight_trace_step{step}.csv"
+        used_bytes = used_bytes_from_corpus(config.data_file) if config.data_file and os.path.exists(config.data_file) else None
+        export_weight_trace_table(model, trace_path, byte_values=used_bytes)
 
 
 def init_model():
@@ -67,13 +75,34 @@ def save_checkpoint(suffix=""):
             'n_layers': config.n_layers,
             'd_state': config.d_state,
             'learning_rate': config.learning_rate,
-        }
+        },
+        # The real, full, ordered column identity this checkpoint's
+        # constraint-facing weights were trained against -- NOT just a
+        # count. Two different discovered-dimension sets can total the
+        # same column count while meaning something completely
+        # different (see mdbe.CONSTRAINT_COLUMN_NAMES's docstring for
+        # the real case that motivated this); load_checkpoint() compares
+        # this list, not TOTAL_CONSTRAINTS, before trusting a shape
+        # match.
+        'constraint_names': CONSTRAINT_COLUMN_NAMES,
     }, filename)
     print(f"  ✓ Checkpoint saved: {filename}")
 
 
-def load_checkpoint(suffix=""):
-    """Load model, optimizer, and training state."""
+def load_checkpoint(suffix="", allow_migrate=False):
+    """Load model, optimizer, and training state.
+
+    allow_migrate=True lets a checkpoint saved under an OLDER, narrower
+    TOTAL_CONSTRAINTS (fewer discovered dimensions) load into today's
+    wider model instead of failing outright -- see
+    mdbe.migrate_checkpoint_state_dict for exactly what that does and
+    doesn't preserve. The optimizer state is deliberately NOT migrated
+    in that case (Adam's momentum buffers are shape-locked to the old
+    parameter sizes same as the weights, and reconciling those too
+    isn't worth the complexity for what amounts to a few steps of
+    re-warming momentum) -- a fresh AdamW is created instead, same as
+    any new model gets. This only ever matters after a real dimension-
+    count change; a normal checkpoint load is unaffected either way."""
     global model, opt
     filename = f"{config.checkpoint_dir}/carbide_ckpt{suffix}.pt"
     if not os.path.exists(filename):
@@ -89,9 +118,67 @@ def load_checkpoint(suffix=""):
     model = Carbide(d_model=config.d_model,
                     n_layers=config.n_layers,
                     d_state=config.d_state)
-    model.load_state_dict(ckpt['model_state'])
+
+    # Real column IDENTITY check, not just a count/shape check. Two
+    # different discovered-dimension sets can total the same number of
+    # columns while meaning something completely different (a real trap
+    # this project hit: an old checkpoint's discovered columns were
+    # PRONOUN_LIKE/AT_START_BEFORE_PREPOSITION_WORDS/etc from one
+    # corpus; the replacement corpus's discovered columns were
+    # PREPOSITION_LIKE/NOUN_LIKE/VERB_LIKE/etc -- both exactly 12
+    # dimensions, so a shape-only check would report success while
+    # silently misapplying every discovered-column weight to the wrong
+    # real-world signal). Refuse BEFORE even attempting a load whenever
+    # that's the case, regardless of whether shapes happen to line up.
+    old_names = ckpt.get('constraint_names')
+    current_names = CONSTRAINT_COLUMN_NAMES
+    safe_prefix_migration = False
+    if old_names is not None and old_names != current_names:
+        safe_prefix_migration = (len(old_names) < len(current_names) and
+                                  current_names[:len(old_names)] == old_names)
+        if not safe_prefix_migration:
+            print("  ✗ This checkpoint's real constraint columns don't match the current "
+                  f"schema (saved with {len(old_names)} named columns, now "
+                  f"{len(current_names)}), and the saved columns are NOT a clean prefix of "
+                  "today's -- some column's IDENTITY changed (e.g. a discovered dimension "
+                  "was replaced by a different one, not just added on top), not merely the "
+                  "count.")
+            print("    Migrating would silently apply a weight learned for one real "
+                  "constraint onto a different one -- refusing even with allow_migrate=True.")
+            print("    Train a fresh model instead.")
+            model = None
+            return False
+
+    migrated_this_load = False
+    try:
+        model.load_state_dict(ckpt['model_state'])
+    except RuntimeError as e:
+        if old_names is None:
+            print("  ⚠ This checkpoint predates column-identity tracking -- only the raw "
+                  "tensor shape could be checked here, which can't rule out a same-count-"
+                  "but-different-meaning schema change. Proceed with that in mind.")
+        if not allow_migrate:
+            print("  ✗ Checkpoint doesn't match the current constraint schema:")
+            print(f"    {e}")
+            print("    Call load_checkpoint(suffix, allow_migrate=True) to migrate it: "
+                  "old weights kept exactly, new dimension(s) start at 0.0 (real "
+                  "'not learned yet', not a guess) and need fresh training exposure.")
+            model = None
+            return False
+        migrated, report = migrate_checkpoint_state_dict(ckpt['model_state'], model)
+        model.load_state_dict(migrated)
+        migrated_this_load = True
+        print("  ⚠ Migrated checkpoint to the current, wider constraint schema:")
+        for key, old_width, new_cols in report:
+            print(f"    {key}: kept {old_width} learned column(s), added {new_cols} new "
+                  f"column(s) at 0.0 (not yet trained)")
+
     opt = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
-    opt.load_state_dict(ckpt['opt_state'])
+    if not migrated_this_load:
+        opt.load_state_dict(ckpt['opt_state'])
+    else:
+        print("    optimizer momentum reset (shape-locked to the old width same as the "
+              "weights) -- a fresh AdamW will re-warm over the next several steps")
 
     train_state.step = ckpt['train_state']['step']
     train_state.loss_history = ckpt['train_state']['loss_history']
