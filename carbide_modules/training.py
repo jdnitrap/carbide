@@ -39,6 +39,17 @@ def _maybe_snapshot_mdbe(step):
         export_weight_trace_table(model, trace_path, byte_values=used_bytes)
 
 
+def _maybe_autosave_checkpoint(step):
+    """Periodic checkpoint save during training, to the default (blank-
+    suffix) filename -- the same one "Resume from checkpoint" loads by
+    default. Without this, a run's actual weights only ever get written to
+    disk when someone explicitly saves from the Checkpoints menu; everything
+    trained since the last manual save lives only in RAM and is lost the
+    moment the process exits."""
+    if step % config.checkpoint_autosave_interval == 0:
+        save_checkpoint()
+
+
 def init_model():
     global model, opt
     model = Carbide(d_model=config.d_model, n_layers=config.n_layers,
@@ -211,11 +222,18 @@ def background_training_thread(n, display_mode, started_event=None):
                 train_state.current_loss = loss
 
             _maybe_snapshot_mdbe(step)
+            _maybe_autosave_checkpoint(step)
 
     except Exception as e:
         print(f"  ✗ Training error: {e}")
     finally:
         train_state.training_active = False
+        # Always save on the way out -- normal completion, an early Stop, or
+        # an exception mid-step -- so progress since the last periodic
+        # autosave (which only lands every checkpoint_autosave_interval
+        # steps) is never silently dropped when the process exits.
+        if model is not None:
+            save_checkpoint()
 
 
 def start_background_training(n, display_mode="none"):
@@ -257,15 +275,23 @@ def train_n_steps(n):
         _maybe_snapshot_mdbe(train_state.step)  # baseline, before any steps this run
 
     start_step = train_state.step
-    for step in range(start_step + 1, start_step + n + 1):
-        loss = train_step()
-        train_state.loss_history.append((step, loss))
-        train_state.step = step
-        train_state.current_loss = loss
-        _maybe_snapshot_mdbe(step)
+    try:
+        for step in range(start_step + 1, start_step + n + 1):
+            loss = train_step()
+            train_state.loss_history.append((step, loss))
+            train_state.step = step
+            train_state.current_loss = loss
+            _maybe_snapshot_mdbe(step)
+            _maybe_autosave_checkpoint(step)
 
-        if step % max(1, n // 10) == 0 or step == start_step + 1:
-            ppl = math.exp(loss) if loss < 10 else float('inf')
-            print(f"  step {step:5d} | loss {loss:.4f} | perplexity {ppl:.1f}")
+            if step % max(1, n // 10) == 0 or step == start_step + 1:
+                ppl = math.exp(loss) if loss < 10 else float('inf')
+                print(f"  step {step:5d} | loss {loss:.4f} | perplexity {ppl:.1f}")
+    finally:
+        # Always save on the way out (normal completion or an exception
+        # mid-step) -- see _maybe_autosave_checkpoint's docstring for why
+        # this can't be left to periodic autosave alone.
+        if model is not None:
+            save_checkpoint()
 
     print(f"  ✓ Trained {n} steps (total: {train_state.step})")

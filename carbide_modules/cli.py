@@ -52,6 +52,10 @@ CARBIDE — WHAT EACH MENU OPTION ACTUALLY DOES
      in the background. Every {interval} steps it AUTOMATICALLY writes
      a snapshot pair to mdbe_snapshots/ (mdbe_table_stepN.csv +
      weight_trace_stepN.csv) — this happens with no action from you.
+     Every {ckpt_interval} steps, AND always when the run ends (normal
+     finish, Stop, or an error), it also AUTOMATICALLY saves the actual
+     trained weights to the default checkpoint ({ckpt_dir}/carbide_ckpt.pt)
+     — the same file "Resume from checkpoint" loads by default.
      "Reset and train from scratch" wipes step count and starts a new
      model; "Resume from checkpoint" continues an existing one.
 
@@ -68,10 +72,11 @@ CARBIDE — WHAT EACH MENU OPTION ACTUALLY DOES
 
   4. Checkpoints
      Save/load/list the actual trained weights, as .pt files in
-     {ckpt_dir}/. This is the ONLY thing that preserves a trained model
-     across restarting the CLI — training itself only lives in memory
-     until you save a checkpoint here (or hit Save outputs for the
-     CSV/PNG reports, which is a separate, smaller thing — see 8).
+     {ckpt_dir}/. Training now autosaves here periodically and always at
+     the end of a run (see 1) — use this menu for a manual/named save
+     (e.g. before a risky hyperparameter change) or to load a specific
+     one. Save outputs (8) is a separate, smaller thing — CSV/PNG
+     reports only, never the weights.
 
   5. Inspect MDBE embeddings
      Quick look at a handful of sample bytes' first 8 learned embedding
@@ -129,8 +134,11 @@ CARBIDE — WHAT EACH MENU OPTION ACTUALLY DOES
      a fresh model to actually use what it finds.
 
   11. Exit
-     Stops any background training and quits. Anything not explicitly
-     saved (4 or 8) is lost — the CLI does not auto-save on exit.
+     Stops any background training and quits. Training's weights are
+     autosaved as it runs and when it stops (see 1), but anything else
+     not explicitly saved (Save outputs, 8, for the CSV/PNG reports; a
+     manual Checkpoints save, 4, for a named/extra copy) is lost — Exit
+     itself still does not trigger a save of its own.
 
   discovered_dimensions.json (not a menu option, runs from a script —
   see carbide_modules/discover_dimension.py) lets Carbide propose and
@@ -154,6 +162,7 @@ def menu_help():
     """Prints HELP_TEXT with the real, current config values substituted in
     (not hardcoded, so it never drifts from actual settings)."""
     print(HELP_TEXT.replace("{interval}", str(config.mdbe_snapshot_interval))
+                    .replace("{ckpt_interval}", str(config.checkpoint_autosave_interval))
                     .replace("{ckpt_dir}", config.checkpoint_dir))
 
 

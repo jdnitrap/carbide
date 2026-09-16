@@ -32,6 +32,19 @@ class Config:
         self.mdbe_snapshot_dir = "mdbe_snapshots"
         self.mdbe_snapshot_interval = 200  # steps
 
+        # Bug found 2026-09-16: a full 100k-step run left the checkpoint on
+        # disk stuck at whatever step was last manually saved (00:02),
+        # because neither train_n_steps() nor background_training_thread()
+        # ever called save_checkpoint() -- only an explicit menu action did.
+        # Everything trained after that manual save only ever existed in the
+        # running process's RAM and was lost the moment it exited, even
+        # though "Save outputs" (which only writes CSV/PNG reports from
+        # loss_history, never the weights) made it look like the run was
+        # captured. This interval drives an automatic checkpoint save (same
+        # default filename as "Resume from checkpoint" uses) during training
+        # so that can't happen again.
+        self.checkpoint_autosave_interval = 1000  # steps
+
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
         if not os.path.exists(self.mdbe_snapshot_dir):
