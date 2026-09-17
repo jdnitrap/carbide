@@ -19,7 +19,12 @@ class Config:
         self.n_layers = 4
         self.d_state = 32
         self.batch_size = 1
-        self.seq_len = 128
+        # 2026-09-16: bumped 128 -> 2048 to test whether longer context
+        # helps the discourse-level MDBE columns (PDTB/clause-scan) and
+        # generation coherence, which 128 bytes (~1 sentence) starves.
+        # Throughput scales ~linearly with seq_len (SSM, not attention),
+        # so expect ~16x fewer steps/sec than the 128 baseline.
+        self.seq_len = 2048
         self.learning_rate = 3e-3
         self.steps_total = 3000
         self.checkpoint_dir = "carbide_checkpoints"

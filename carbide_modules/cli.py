@@ -337,21 +337,23 @@ Current settings:
   n_layers:     {config.n_layers}
   d_state:      {config.d_state}
   batch_size:   {config.batch_size}
+  seq_len:      {config.seq_len}
   learning_rate: {config.learning_rate}
 
 1. d_model (embedding dimension)
 2. n_layers (SSM blocks)
 3. d_state (state dimension per SSM)
 4. batch_size
-5. learning_rate
-6. Back
+5. seq_len (context window, bytes)
+6. learning_rate
+7. Back
 """)
     choice = input("Edit: ").strip()
 
     if choice in ("1", "2", "3") and train_state.training_active:
         print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
-        print("    before changing d_model/n_layers/d_state. Batch size and learning rate are safe to")
-        print("    change while training runs.")
+        print("    before changing d_model/n_layers/d_state. Batch size, seq_len, and learning rate are")
+        print("    safe to change while training runs.")
         return
 
     try:
@@ -364,6 +366,8 @@ Current settings:
         elif choice == "4":
             config.batch_size = int(input("  New batch_size: "))
         elif choice == "5":
+            config.seq_len = int(input("  New seq_len: "))
+        elif choice == "6":
             config.learning_rate = float(input("  New learning_rate: "))
     except ValueError:
         print("  ✗ Please enter a valid number")
@@ -374,8 +378,8 @@ Current settings:
         training.opt = None
         print("  ⚠ Model structure changed — model will be reinitialized on next training step")
 
-    if choice in ["4", "5"]:
-        print("  ✓ Updated (takes effect on next training)")
+    if choice in ["4", "5", "6"]:
+        print("  ✓ Updated (takes effect on next training step)")
 
 
 def menu_checkpoints():

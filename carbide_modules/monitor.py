@@ -74,7 +74,8 @@ def print_live_status(total_steps):
 
     print(f"Loss:       {train_state.current_loss:8.4f}")
     print(f"Perplexity: {ppl:8.1f}")
-    print(f"Speed:      {speed:8.2f} steps/sec")
+    bytes_per_sec = speed * config.batch_size * config.seq_len
+    print(f"Speed:      {speed:8.2f} steps/sec  ({bytes_per_sec:,.0f} bytes/sec)")
     print(f"Elapsed:    {int(elapsed//60):3d}:{int(elapsed%60):02d}")
     print(f"ETA:        {eta_min:3d}:{eta_sec:02d}")
     print()
