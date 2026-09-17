@@ -1,1282 +1,1282 @@
 {
   "0": {
-    "name": "is_upper_LIKE_0",
-    "constraint": "is_upper",
-    "correlation": 0.2226177603006363
+    "name": "is_punct_LIKE_0",
+    "constraint": "is_punct",
+    "correlation": 0.1842777132987976
   },
   "1": {
-    "name": "ARTICLE_LIKE_1",
-    "constraint": "ARTICLE",
-    "correlation": 0.16642537713050842
+    "name": "is_punct_LIKE_1",
+    "constraint": "is_punct",
+    "correlation": -0.22716324031352997
   },
   "2": {
-    "name": "is_alpha_LIKE_2",
-    "constraint": "is_alpha",
-    "correlation": 0.23144075274467468
+    "name": "ARTICLE_LIKE_2",
+    "constraint": "ARTICLE",
+    "correlation": -0.23649387061595917
   },
   "3": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_3",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.15588395297527313
+    "name": "pragmatics_LIKE_3",
+    "constraint": "pragmatics",
+    "correlation": 0.1904178261756897
   },
   "4": {
-    "name": "ARTICLE_LIKE_4",
-    "constraint": "ARTICLE",
-    "correlation": -0.2174934446811676
+    "name": "is_digit_LIKE_4",
+    "constraint": "is_digit",
+    "correlation": -0.20297254621982574
   },
   "5": {
-    "name": "ARTICLE_LIKE_5",
-    "constraint": "ARTICLE",
-    "correlation": 0.1881081759929657
+    "name": "pragmatics_LIKE_5",
+    "constraint": "pragmatics",
+    "correlation": -0.2202143371105194
   },
   "6": {
-    "name": "pragmatics_LIKE_6",
-    "constraint": "pragmatics",
-    "correlation": -0.18416577577590942
+    "name": "is_punct_LIKE_6",
+    "constraint": "is_punct",
+    "correlation": 0.15827208757400513
   },
   "7": {
-    "name": "utf8_lead_LIKE_7",
-    "constraint": "utf8_lead",
-    "correlation": -0.21144390106201172
+    "name": "is_digit_LIKE_7",
+    "constraint": "is_digit",
+    "correlation": -0.171938955783844
   },
   "8": {
-    "name": "PREPOSITION_LIKE_LIKE_8",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.23611071705818176
+    "name": "is_digit_LIKE_8",
+    "constraint": "is_digit",
+    "correlation": -0.13952836394309998
   },
   "9": {
     "name": "pragmatics_LIKE_9",
     "constraint": "pragmatics",
-    "correlation": -0.15770824253559113
+    "correlation": 0.18394064903259277
   },
   "10": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_10",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.23736704885959625
+    "name": "is_punct_LIKE_10",
+    "constraint": "is_punct",
+    "correlation": 0.15944738686084747
   },
   "11": {
-    "name": "is_digit_LIKE_11",
-    "constraint": "is_digit",
-    "correlation": -0.18373648822307587
+    "name": "is_punct_LIKE_11",
+    "constraint": "is_punct",
+    "correlation": 0.16050848364830017
   },
   "12": {
-    "name": "PRONOUN_LIKE_12",
-    "constraint": "PRONOUN",
-    "correlation": 0.1880153864622116
+    "name": "is_alpha_LIKE_12",
+    "constraint": "is_alpha",
+    "correlation": -0.2371407300233841
   },
   "13": {
     "name": "pragmatics_LIKE_13",
     "constraint": "pragmatics",
-    "correlation": -0.19535064697265625
+    "correlation": -0.18978838622570038
   },
   "14": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_14",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.18002979457378387
+    "name": "is_punct_LIKE_14",
+    "constraint": "is_punct",
+    "correlation": 0.14464303851127625
   },
   "15": {
-    "name": "is_punct_LIKE_15",
-    "constraint": "is_punct",
-    "correlation": 0.20030835270881653
+    "name": "pragmatics_LIKE_15",
+    "constraint": "pragmatics",
+    "correlation": -0.12074515223503113
   },
   "16": {
-    "name": "is_alpha_LIKE_16",
-    "constraint": "is_alpha",
-    "correlation": 0.17890134453773499
+    "name": "PART_OF_SPEECH_NONE_LIKE_16",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.1732797771692276
   },
   "17": {
-    "name": "ARTICLE_LIKE_17",
-    "constraint": "ARTICLE",
-    "correlation": 0.134048193693161
+    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_17",
+    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
+    "correlation": 0.14463843405246735
   },
   "18": {
-    "name": "utf8_lead_LIKE_18",
-    "constraint": "utf8_lead",
-    "correlation": 0.2501661777496338
+    "name": "is_digit_LIKE_18",
+    "constraint": "is_digit",
+    "correlation": 0.273772656917572
   },
   "19": {
-    "name": "is_space_LIKE_19",
-    "constraint": "is_space",
-    "correlation": 0.18711116909980774
+    "name": "is_punct_LIKE_19",
+    "constraint": "is_punct",
+    "correlation": -0.21471424400806427
   },
   "20": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_20",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.1418723315000534
+    "name": "is_digit_LIKE_20",
+    "constraint": "is_digit",
+    "correlation": 0.18784883618354797
   },
   "21": {
-    "name": "ARTICLE_LIKE_21",
-    "constraint": "ARTICLE",
-    "correlation": -0.176443949341774
+    "name": "PREPOSITION_LIKE_LIKE_21",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": 0.20348967611789703
   },
   "22": {
-    "name": "is_punct_LIKE_22",
-    "constraint": "is_punct",
-    "correlation": 0.16439323127269745
+    "name": "PREPOSITION_LIKE_LIKE_22",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": -0.16142110526561737
   },
   "23": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_23",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.1542479693889618
+    "name": "is_digit_LIKE_23",
+    "constraint": "is_digit",
+    "correlation": 0.2690266966819763
   },
   "24": {
-    "name": "ARTICLE_LIKE_24",
-    "constraint": "ARTICLE",
-    "correlation": -0.08928834646940231
+    "name": "INTERROGATIVE_LIKE_24",
+    "constraint": "INTERROGATIVE",
+    "correlation": -0.2187611311674118
   },
   "25": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_25",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.14755332469940186
+    "name": "tokenization_LIKE_25",
+    "constraint": "tokenization",
+    "correlation": 0.16826045513153076
   },
   "26": {
-    "name": "is_punct_LIKE_26",
-    "constraint": "is_punct",
-    "correlation": 0.233930304646492
+    "name": "utf8_lead_LIKE_26",
+    "constraint": "utf8_lead",
+    "correlation": 0.14205309748649597
   },
   "27": {
-    "name": "pragmatics_LIKE_27",
-    "constraint": "pragmatics",
-    "correlation": -0.18171340227127075
+    "name": "is_upper_LIKE_27",
+    "constraint": "is_upper",
+    "correlation": -0.19350896775722504
   },
   "28": {
-    "name": "is_digit_LIKE_28",
-    "constraint": "is_digit",
-    "correlation": -0.1784774363040924
+    "name": "ARTICLE_LIKE_28",
+    "constraint": "ARTICLE",
+    "correlation": 0.15853288769721985
   },
   "29": {
-    "name": "PREPOSITION_LIKE_LIKE_29",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": 0.09030986577272415
+    "name": "is_digit_LIKE_29",
+    "constraint": "is_digit",
+    "correlation": 0.29729968309402466
   },
   "30": {
-    "name": "tokenization_LIKE_30",
-    "constraint": "tokenization",
-    "correlation": 0.1913721263408661
+    "name": "utf8_lead_LIKE_30",
+    "constraint": "utf8_lead",
+    "correlation": 0.18797560036182404
   },
   "31": {
-    "name": "ARTICLE_LIKE_31",
-    "constraint": "ARTICLE",
-    "correlation": 0.14422620832920074
+    "name": "is_upper_LIKE_31",
+    "constraint": "is_upper",
+    "correlation": 0.3696573078632355
   },
   "32": {
-    "name": "is_punct_LIKE_32",
-    "constraint": "is_punct",
-    "correlation": -0.15113380551338196
+    "name": "is_digit_LIKE_32",
+    "constraint": "is_digit",
+    "correlation": 0.22327807545661926
   },
   "33": {
-    "name": "tokenization_LIKE_33",
-    "constraint": "tokenization",
-    "correlation": -0.1338917315006256
+    "name": "is_digit_LIKE_33",
+    "constraint": "is_digit",
+    "correlation": -0.22555941343307495
   },
   "34": {
-    "name": "pragmatics_LIKE_34",
-    "constraint": "pragmatics",
-    "correlation": 0.13663744926452637
+    "name": "is_punct_LIKE_34",
+    "constraint": "is_punct",
+    "correlation": 0.19725553691387177
   },
   "35": {
-    "name": "utf8_lead_LIKE_35",
-    "constraint": "utf8_lead",
-    "correlation": 0.1708819419145584
+    "name": "pragmatics_LIKE_35",
+    "constraint": "pragmatics",
+    "correlation": -0.18941542506217957
   },
   "36": {
-    "name": "PREPOSITION_LIKE_LIKE_36",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.169910728931427
+    "name": "is_punct_LIKE_36",
+    "constraint": "is_punct",
+    "correlation": 0.24235396087169647
   },
   "37": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_37",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.2022193968296051
+    "name": "utf8_lead_LIKE_37",
+    "constraint": "utf8_lead",
+    "correlation": -0.23063984513282776
   },
   "38": {
-    "name": "PREPOSITION_LIKE_LIKE_38",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.2168004810810089
+    "name": "is_space_LIKE_38",
+    "constraint": "is_space",
+    "correlation": -0.11355823278427124
   },
   "39": {
-    "name": "NUMBER_NONE_LIKE_39",
-    "constraint": "NUMBER:NONE",
-    "correlation": 0.2191123515367508
+    "name": "pragmatics_LIKE_39",
+    "constraint": "pragmatics",
+    "correlation": 0.17039410769939423
   },
   "40": {
-    "name": "ARTICLE_LIKE_40",
-    "constraint": "ARTICLE",
-    "correlation": 0.17224664986133575
+    "name": "is_upper_LIKE_40",
+    "constraint": "is_upper",
+    "correlation": -0.2868626117706299
   },
   "41": {
-    "name": "is_space_LIKE_41",
-    "constraint": "is_space",
-    "correlation": -0.16737934947013855
+    "name": "is_digit_LIKE_41",
+    "constraint": "is_digit",
+    "correlation": 0.15634804964065552
   },
   "42": {
-    "name": "INTERROGATIVE_LIKE_42",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.16758225858211517
+    "name": "is_digit_LIKE_42",
+    "constraint": "is_digit",
+    "correlation": -0.1521766185760498
   },
   "43": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_43",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": -0.10537993162870407
+    "name": "pragmatics_LIKE_43",
+    "constraint": "pragmatics",
+    "correlation": 0.2569499611854553
   },
   "44": {
-    "name": "pragmatics_LIKE_44",
-    "constraint": "pragmatics",
-    "correlation": -0.17747750878334045
+    "name": "ARTICLE_LIKE_44",
+    "constraint": "ARTICLE",
+    "correlation": -0.20638039708137512
   },
   "45": {
-    "name": "INTERROGATIVE_LIKE_45",
-    "constraint": "INTERROGATIVE",
-    "correlation": 0.21993833780288696
+    "name": "ARTICLE_LIKE_45",
+    "constraint": "ARTICLE",
+    "correlation": -0.177461639046669
   },
   "46": {
-    "name": "is_upper_LIKE_46",
-    "constraint": "is_upper",
-    "correlation": 0.1328890174627304
+    "name": "is_space_LIKE_46",
+    "constraint": "is_space",
+    "correlation": 0.2508661448955536
   },
   "47": {
-    "name": "MOOD_NONE_LIKE_47",
-    "constraint": "MOOD:NONE",
-    "correlation": -0.1768764704465866
+    "name": "is_alpha_LIKE_47",
+    "constraint": "is_alpha",
+    "correlation": -0.2515462040901184
   },
   "48": {
     "name": "pragmatics_LIKE_48",
     "constraint": "pragmatics",
-    "correlation": 0.2555311620235443
+    "correlation": 0.29978492856025696
   },
   "49": {
     "name": "is_upper_LIKE_49",
     "constraint": "is_upper",
-    "correlation": 0.2066035121679306
+    "correlation": -0.16572970151901245
   },
   "50": {
-    "name": "PREPOSITION_LIKE_LIKE_50",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": 0.23073285818099976
+    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_50",
+    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
+    "correlation": -0.1763388067483902
   },
   "51": {
-    "name": "pragmatics_LIKE_51",
-    "constraint": "pragmatics",
-    "correlation": 0.18410101532936096
+    "name": "is_space_LIKE_51",
+    "constraint": "is_space",
+    "correlation": 0.206416517496109
   },
   "52": {
     "name": "is_upper_LIKE_52",
     "constraint": "is_upper",
-    "correlation": 0.21951250731945038
+    "correlation": -0.21152950823307037
   },
   "53": {
-    "name": "utf8_lead_LIKE_53",
-    "constraint": "utf8_lead",
-    "correlation": 0.18809925019741058
+    "name": "is_digit_LIKE_53",
+    "constraint": "is_digit",
+    "correlation": 0.1769123524427414
   },
   "54": {
-    "name": "PREPOSITION_LIKE_LIKE_54",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": 0.1524123251438141
+    "name": "pragmatics_LIKE_54",
+    "constraint": "pragmatics",
+    "correlation": -0.20011402666568756
   },
   "55": {
-    "name": "pragmatics_LIKE_55",
-    "constraint": "pragmatics",
-    "correlation": -0.1858009546995163
+    "name": "tokenization_LIKE_55",
+    "constraint": "tokenization",
+    "correlation": -0.1794603168964386
   },
   "56": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_56",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.13955804705619812
+    "name": "pragmatics_LIKE_56",
+    "constraint": "pragmatics",
+    "correlation": 0.3381543755531311
   },
   "57": {
-    "name": "is_punct_LIKE_57",
-    "constraint": "is_punct",
-    "correlation": -0.19462913274765015
+    "name": "pragmatics_LIKE_57",
+    "constraint": "pragmatics",
+    "correlation": 0.18239560723304749
   },
   "58": {
     "name": "pragmatics_LIKE_58",
     "constraint": "pragmatics",
-    "correlation": 0.19843439757823944
+    "correlation": 0.15049007534980774
   },
   "59": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_59",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.2005443274974823
+    "name": "is_punct_LIKE_59",
+    "constraint": "is_punct",
+    "correlation": -0.18211492896080017
   },
   "60": {
-    "name": "is_digit_LIKE_60",
-    "constraint": "is_digit",
-    "correlation": -0.14858216047286987
+    "name": "is_upper_LIKE_60",
+    "constraint": "is_upper",
+    "correlation": 0.2671572268009186
   },
   "61": {
-    "name": "is_alpha_LIKE_61",
-    "constraint": "is_alpha",
-    "correlation": 0.1886158287525177
+    "name": "is_punct_LIKE_61",
+    "constraint": "is_punct",
+    "correlation": 0.25975799560546875
   },
   "62": {
-    "name": "is_upper_LIKE_62",
-    "constraint": "is_upper",
-    "correlation": -0.1865917146205902
+    "name": "AUXILIARY_VERB_LIKE_LIKE_62",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.26799285411834717
   },
   "63": {
-    "name": "pragmatics_LIKE_63",
-    "constraint": "pragmatics",
-    "correlation": -0.1675562560558319
+    "name": "is_punct_LIKE_63",
+    "constraint": "is_punct",
+    "correlation": -0.2050953060388565
   },
   "64": {
-    "name": "is_punct_LIKE_64",
-    "constraint": "is_punct",
-    "correlation": -0.2227933406829834
+    "name": "PRONOUN_LIKE_64",
+    "constraint": "PRONOUN",
+    "correlation": 0.2515626847743988
   },
   "65": {
-    "name": "pragmatics_LIKE_65",
-    "constraint": "pragmatics",
-    "correlation": -0.23220796883106232
+    "name": "MOOD_NONE_LIKE_65",
+    "constraint": "MOOD:NONE",
+    "correlation": -0.2039204239845276
   },
   "66": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_66",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.15621252357959747
+    "name": "is_alpha_LIKE_66",
+    "constraint": "is_alpha",
+    "correlation": -0.19773200154304504
   },
   "67": {
-    "name": "is_upper_LIKE_67",
-    "constraint": "is_upper",
-    "correlation": 0.19603122770786285
+    "name": "is_digit_LIKE_67",
+    "constraint": "is_digit",
+    "correlation": 0.11997348070144653
   },
   "68": {
-    "name": "NUMBER_NONE_LIKE_68",
-    "constraint": "NUMBER:NONE",
-    "correlation": 0.13103164732456207
+    "name": "pragmatics_LIKE_68",
+    "constraint": "pragmatics",
+    "correlation": -0.21570372581481934
   },
   "69": {
     "name": "is_upper_LIKE_69",
     "constraint": "is_upper",
-    "correlation": 0.2730554938316345
+    "correlation": -0.2389981895685196
   },
   "70": {
-    "name": "ARTICLE_LIKE_70",
-    "constraint": "ARTICLE",
-    "correlation": 0.1967574506998062
+    "name": "is_punct_LIKE_70",
+    "constraint": "is_punct",
+    "correlation": 0.1947760432958603
   },
   "71": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_71",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.21827828884124756
+    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_71",
+    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
+    "correlation": 0.1065080314874649
   },
   "72": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_72",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.1591762751340866
+    "name": "is_upper_LIKE_72",
+    "constraint": "is_upper",
+    "correlation": -0.23188115656375885
   },
   "73": {
     "name": "is_upper_LIKE_73",
     "constraint": "is_upper",
-    "correlation": 0.08679453283548355
+    "correlation": 0.3035886287689209
   },
   "74": {
-    "name": "INTERROGATIVE_LIKE_74",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.17836427688598633
+    "name": "ARTICLE_LIKE_74",
+    "constraint": "ARTICLE",
+    "correlation": -0.27904266119003296
   },
   "75": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_75",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.10728995501995087
+    "name": "is_alpha_LIKE_75",
+    "constraint": "is_alpha",
+    "correlation": -0.23518072068691254
   },
   "76": {
     "name": "pragmatics_LIKE_76",
     "constraint": "pragmatics",
-    "correlation": -0.14067678153514862
+    "correlation": 0.16687050461769104
   },
   "77": {
-    "name": "is_punct_LIKE_77",
-    "constraint": "is_punct",
-    "correlation": 0.1582798957824707
+    "name": "is_upper_LIKE_77",
+    "constraint": "is_upper",
+    "correlation": 0.31487247347831726
   },
   "78": {
-    "name": "ARTICLE_LIKE_78",
-    "constraint": "ARTICLE",
-    "correlation": 0.134333997964859
+    "name": "is_digit_LIKE_78",
+    "constraint": "is_digit",
+    "correlation": 0.2516704499721527
   },
   "79": {
-    "name": "is_punct_LIKE_79",
-    "constraint": "is_punct",
-    "correlation": 0.11559192836284637
+    "name": "is_alpha_LIKE_79",
+    "constraint": "is_alpha",
+    "correlation": -0.2220558524131775
   },
   "80": {
-    "name": "MOOD_NONE_LIKE_80",
-    "constraint": "MOOD:NONE",
-    "correlation": -0.18123283982276917
+    "name": "pragmatics_LIKE_80",
+    "constraint": "pragmatics",
+    "correlation": 0.4066709280014038
   },
   "81": {
-    "name": "utf8_lead_LIKE_81",
-    "constraint": "utf8_lead",
-    "correlation": -0.14414359629154205
+    "name": "ARTICLE_LIKE_81",
+    "constraint": "ARTICLE",
+    "correlation": -0.13312536478042603
   },
   "82": {
-    "name": "INTERROGATIVE_LIKE_82",
-    "constraint": "INTERROGATIVE",
-    "correlation": 0.1790551245212555
+    "name": "is_punct_LIKE_82",
+    "constraint": "is_punct",
+    "correlation": -0.21423597633838654
   },
   "83": {
-    "name": "PREPOSITION_LIKE_LIKE_83",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.11996110528707504
+    "name": "is_punct_LIKE_83",
+    "constraint": "is_punct",
+    "correlation": 0.28197288513183594
   },
   "84": {
-    "name": "ARTICLE_LIKE_84",
-    "constraint": "ARTICLE",
-    "correlation": -0.18068890273571014
+    "name": "is_punct_LIKE_84",
+    "constraint": "is_punct",
+    "correlation": 0.18466061353683472
   },
   "85": {
-    "name": "PRONOUN_LIKE_85",
-    "constraint": "PRONOUN",
-    "correlation": 0.1485222727060318
+    "name": "is_upper_LIKE_85",
+    "constraint": "is_upper",
+    "correlation": -0.21031317114830017
   },
   "86": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_86",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.16334925591945648
+    "name": "AUXILIARY_VERB_LIKE_LIKE_86",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.25209295749664307
   },
   "87": {
-    "name": "is_space_LIKE_87",
-    "constraint": "is_space",
-    "correlation": 0.27878981828689575
+    "name": "is_digit_LIKE_87",
+    "constraint": "is_digit",
+    "correlation": -0.22050149738788605
   },
   "88": {
-    "name": "pragmatics_LIKE_88",
-    "constraint": "pragmatics",
-    "correlation": -0.10939721763134003
+    "name": "PART_OF_SPEECH_NONE_LIKE_88",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.22018122673034668
   },
   "89": {
-    "name": "is_space_LIKE_89",
-    "constraint": "is_space",
-    "correlation": 0.19655129313468933
+    "name": "pragmatics_LIKE_89",
+    "constraint": "pragmatics",
+    "correlation": -0.33881255984306335
   },
   "90": {
-    "name": "ARTICLE_LIKE_90",
-    "constraint": "ARTICLE",
-    "correlation": 0.23226162791252136
+    "name": "PREPOSITION_LIKE_LIKE_90",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": 0.21834389865398407
   },
   "91": {
-    "name": "utf8_lead_LIKE_91",
-    "constraint": "utf8_lead",
-    "correlation": 0.13359396159648895
+    "name": "pragmatics_LIKE_91",
+    "constraint": "pragmatics",
+    "correlation": -0.29838111996650696
   },
   "92": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_92",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.1496480107307434
+    "name": "is_punct_LIKE_92",
+    "constraint": "is_punct",
+    "correlation": 0.25795409083366394
   },
   "93": {
-    "name": "PRONOUN_LIKE_93",
-    "constraint": "PRONOUN",
-    "correlation": 0.2451835423707962
+    "name": "utf8_lead_LIKE_93",
+    "constraint": "utf8_lead",
+    "correlation": 0.24535013735294342
   },
   "94": {
-    "name": "utf8_lead_LIKE_94",
-    "constraint": "utf8_lead",
-    "correlation": -0.1314447671175003
+    "name": "AUXILIARY_VERB_LIKE_LIKE_94",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.2612430453300476
   },
   "95": {
-    "name": "is_digit_LIKE_95",
-    "constraint": "is_digit",
-    "correlation": 0.1412716656923294
+    "name": "AUXILIARY_VERB_LIKE_LIKE_95",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.211714968085289
   },
   "96": {
-    "name": "is_upper_LIKE_96",
-    "constraint": "is_upper",
-    "correlation": -0.23109662532806396
+    "name": "is_space_LIKE_96",
+    "constraint": "is_space",
+    "correlation": 0.18275122344493866
   },
   "97": {
-    "name": "PREPOSITION_LIKE_LIKE_97",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.20381809771060944
+    "name": "tokenization_LIKE_97",
+    "constraint": "tokenization",
+    "correlation": -0.08094713091850281
   },
   "98": {
-    "name": "is_space_LIKE_98",
-    "constraint": "is_space",
-    "correlation": -0.16655795276165009
+    "name": "PART_OF_SPEECH_NONE_LIKE_98",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": 0.1540372371673584
   },
   "99": {
-    "name": "is_digit_LIKE_99",
-    "constraint": "is_digit",
-    "correlation": 0.15792827308177948
+    "name": "PREPOSITION_LIKE_LIKE_99",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": -0.17895875871181488
   },
   "100": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_100",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.20155200362205505
+    "name": "is_punct_LIKE_100",
+    "constraint": "is_punct",
+    "correlation": -0.2099776715040207
   },
   "101": {
-    "name": "PRONOUN_LIKE_101",
-    "constraint": "PRONOUN",
-    "correlation": 0.1472565233707428
+    "name": "PART_OF_SPEECH_NONE_LIKE_101",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.16231322288513184
   },
   "102": {
-    "name": "INTERROGATIVE_LIKE_102",
-    "constraint": "INTERROGATIVE",
-    "correlation": 0.16787421703338623
+    "name": "is_alpha_LIKE_102",
+    "constraint": "is_alpha",
+    "correlation": -0.25788944959640503
   },
   "103": {
-    "name": "PRONOUN_LIKE_103",
-    "constraint": "PRONOUN",
-    "correlation": -0.14465869963169098
+    "name": "NUMBER_NONE_LIKE_103",
+    "constraint": "NUMBER:NONE",
+    "correlation": 0.16837050020694733
   },
   "104": {
-    "name": "PRONOUN_LIKE_104",
-    "constraint": "PRONOUN",
-    "correlation": 0.14513593912124634
+    "name": "is_alpha_LIKE_104",
+    "constraint": "is_alpha",
+    "correlation": 0.21128197014331818
   },
   "105": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_105",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.24320362508296967
+    "name": "is_space_LIKE_105",
+    "constraint": "is_space",
+    "correlation": 0.2637630105018616
   },
   "106": {
-    "name": "INTERROGATIVE_LIKE_106",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.15046298503875732
+    "name": "PRONOUN_LIKE_106",
+    "constraint": "PRONOUN",
+    "correlation": -0.21029172837734222
   },
   "107": {
-    "name": "is_upper_LIKE_107",
-    "constraint": "is_upper",
-    "correlation": 0.15451335906982422
+    "name": "pragmatics_LIKE_107",
+    "constraint": "pragmatics",
+    "correlation": -0.2682347297668457
   },
   "108": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_108",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.2031649351119995
+    "name": "is_upper_LIKE_108",
+    "constraint": "is_upper",
+    "correlation": 0.20001642405986786
   },
   "109": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_109",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.2770567834377289
+    "name": "is_punct_LIKE_109",
+    "constraint": "is_punct",
+    "correlation": 0.17862440645694733
   },
   "110": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_110",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.21467389166355133
+    "name": "AUXILIARY_VERB_LIKE_LIKE_110",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.18848265707492828
   },
   "111": {
-    "name": "INTERROGATIVE_LIKE_111",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.1627964824438095
+    "name": "is_digit_LIKE_111",
+    "constraint": "is_digit",
+    "correlation": -0.13132241368293762
   },
   "112": {
-    "name": "ARTICLE_LIKE_112",
-    "constraint": "ARTICLE",
-    "correlation": 0.20260219275951385
+    "name": "is_upper_LIKE_112",
+    "constraint": "is_upper",
+    "correlation": 0.24599330127239227
   },
   "113": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_113",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.19386963546276093
+    "name": "is_digit_LIKE_113",
+    "constraint": "is_digit",
+    "correlation": -0.2035481333732605
   },
   "114": {
-    "name": "is_space_LIKE_114",
-    "constraint": "is_space",
-    "correlation": -0.18773259222507477
+    "name": "MOOD_NONE_LIKE_114",
+    "constraint": "MOOD:NONE",
+    "correlation": -0.2161962240934372
   },
   "115": {
-    "name": "utf8_lead_LIKE_115",
-    "constraint": "utf8_lead",
-    "correlation": 0.16387930512428284
+    "name": "is_alpha_LIKE_115",
+    "constraint": "is_alpha",
+    "correlation": 0.21205005049705505
   },
   "116": {
-    "name": "is_alpha_LIKE_116",
-    "constraint": "is_alpha",
-    "correlation": 0.1620766520500183
+    "name": "ARTICLE_LIKE_116",
+    "constraint": "ARTICLE",
+    "correlation": -0.2076214849948883
   },
   "117": {
-    "name": "is_upper_LIKE_117",
-    "constraint": "is_upper",
-    "correlation": 0.11175797134637833
+    "name": "PART_OF_SPEECH_NONE_LIKE_117",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.37079524993896484
   },
   "118": {
-    "name": "is_space_LIKE_118",
-    "constraint": "is_space",
-    "correlation": -0.10622456669807434
+    "name": "pragmatics_LIKE_118",
+    "constraint": "pragmatics",
+    "correlation": 0.20311924815177917
   },
   "119": {
     "name": "is_upper_LIKE_119",
     "constraint": "is_upper",
-    "correlation": -0.10610999166965485
+    "correlation": -0.18400923907756805
   },
   "120": {
-    "name": "is_digit_LIKE_120",
-    "constraint": "is_digit",
-    "correlation": 0.17765961587429047
+    "name": "pragmatics_LIKE_120",
+    "constraint": "pragmatics",
+    "correlation": 0.21645155549049377
   },
   "121": {
-    "name": "is_space_LIKE_121",
-    "constraint": "is_space",
-    "correlation": 0.16734938323497772
+    "name": "PART_OF_SPEECH_NONE_LIKE_121",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.15905123949050903
   },
   "122": {
-    "name": "pragmatics_LIKE_122",
-    "constraint": "pragmatics",
-    "correlation": 0.15402287244796753
+    "name": "is_space_LIKE_122",
+    "constraint": "is_space",
+    "correlation": 0.11689942330121994
   },
   "123": {
     "name": "pragmatics_LIKE_123",
     "constraint": "pragmatics",
-    "correlation": 0.14452074468135834
+    "correlation": -0.36975401639938354
   },
   "124": {
     "name": "is_digit_LIKE_124",
     "constraint": "is_digit",
-    "correlation": -0.2459590882062912
+    "correlation": 0.22579535841941833
   },
   "125": {
-    "name": "pragmatics_LIKE_125",
-    "constraint": "pragmatics",
-    "correlation": -0.15406449139118195
+    "name": "is_punct_LIKE_125",
+    "constraint": "is_punct",
+    "correlation": -0.2152363806962967
   },
   "126": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_126",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.15573063492774963
+    "name": "pragmatics_LIKE_126",
+    "constraint": "pragmatics",
+    "correlation": 0.27161017060279846
   },
   "127": {
-    "name": "is_alpha_LIKE_127",
-    "constraint": "is_alpha",
-    "correlation": 0.15424776077270508
+    "name": "AUXILIARY_VERB_LIKE_LIKE_127",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.20103174448013306
   },
   "128": {
-    "name": "is_space_LIKE_128",
-    "constraint": "is_space",
-    "correlation": -0.17394231259822845
+    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_128",
+    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
+    "correlation": -0.1566978394985199
   },
   "129": {
-    "name": "is_alpha_LIKE_129",
-    "constraint": "is_alpha",
-    "correlation": 0.16919159889221191
+    "name": "is_punct_LIKE_129",
+    "constraint": "is_punct",
+    "correlation": -0.23338830471038818
   },
   "130": {
-    "name": "is_punct_LIKE_130",
-    "constraint": "is_punct",
-    "correlation": -0.13183219730854034
+    "name": "pragmatics_LIKE_130",
+    "constraint": "pragmatics",
+    "correlation": -0.14521843194961548
   },
   "131": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_131",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.14752545952796936
+    "name": "is_punct_LIKE_131",
+    "constraint": "is_punct",
+    "correlation": -0.19132864475250244
   },
   "132": {
-    "name": "MOOD_NONE_LIKE_132",
-    "constraint": "MOOD:NONE",
-    "correlation": -0.2142123132944107
+    "name": "pragmatics_LIKE_132",
+    "constraint": "pragmatics",
+    "correlation": -0.3904642164707184
   },
   "133": {
-    "name": "ARTICLE_LIKE_133",
-    "constraint": "ARTICLE",
-    "correlation": 0.21185138821601868
+    "name": "pragmatics_LIKE_133",
+    "constraint": "pragmatics",
+    "correlation": 0.26224255561828613
   },
   "134": {
-    "name": "is_digit_LIKE_134",
-    "constraint": "is_digit",
-    "correlation": -0.2199941724538803
+    "name": "is_space_LIKE_134",
+    "constraint": "is_space",
+    "correlation": 0.26852697134017944
   },
   "135": {
-    "name": "is_upper_LIKE_135",
-    "constraint": "is_upper",
-    "correlation": -0.091432586312294
+    "name": "is_digit_LIKE_135",
+    "constraint": "is_digit",
+    "correlation": -0.2573206424713135
   },
   "136": {
-    "name": "is_upper_LIKE_136",
-    "constraint": "is_upper",
-    "correlation": 0.10026003420352936
+    "name": "pragmatics_LIKE_136",
+    "constraint": "pragmatics",
+    "correlation": -0.18634475767612457
   },
   "137": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_137",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.19729112088680267
+    "name": "is_punct_LIKE_137",
+    "constraint": "is_punct",
+    "correlation": 0.09178988635540009
   },
   "138": {
-    "name": "pragmatics_LIKE_138",
-    "constraint": "pragmatics",
-    "correlation": -0.21450001001358032
+    "name": "is_digit_LIKE_138",
+    "constraint": "is_digit",
+    "correlation": -0.20710888504981995
   },
   "139": {
-    "name": "is_punct_LIKE_139",
-    "constraint": "is_punct",
-    "correlation": 0.20615456998348236
+    "name": "PART_OF_SPEECH_NONE_LIKE_139",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.26829320192337036
   },
   "140": {
-    "name": "is_punct_LIKE_140",
-    "constraint": "is_punct",
-    "correlation": -0.13081447780132294
+    "name": "is_upper_LIKE_140",
+    "constraint": "is_upper",
+    "correlation": -0.19169364869594574
   },
   "141": {
-    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_141",
-    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
-    "correlation": 0.23857618868350983
+    "name": "pragmatics_LIKE_141",
+    "constraint": "pragmatics",
+    "correlation": 0.24434179067611694
   },
   "142": {
-    "name": "pragmatics_LIKE_142",
-    "constraint": "pragmatics",
-    "correlation": -0.15333940088748932
+    "name": "PRONOUN_LIKE_142",
+    "constraint": "PRONOUN",
+    "correlation": -0.18568092584609985
   },
   "143": {
     "name": "pragmatics_LIKE_143",
     "constraint": "pragmatics",
-    "correlation": 0.18868106603622437
+    "correlation": -0.27467286586761475
   },
   "144": {
     "name": "is_digit_LIKE_144",
     "constraint": "is_digit",
-    "correlation": 0.09312509000301361
+    "correlation": -0.23518779873847961
   },
   "145": {
-    "name": "is_punct_LIKE_145",
-    "constraint": "is_punct",
-    "correlation": -0.3229013979434967
+    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_145",
+    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
+    "correlation": -0.2562985122203827
   },
   "146": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_146",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.1933811604976654
+    "name": "is_punct_LIKE_146",
+    "constraint": "is_punct",
+    "correlation": -0.2542629539966583
   },
   "147": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_147",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.12883500754833221
+    "name": "is_digit_LIKE_147",
+    "constraint": "is_digit",
+    "correlation": 0.13318803906440735
   },
   "148": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_148",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.24700570106506348
+    "name": "ARTICLE_LIKE_148",
+    "constraint": "ARTICLE",
+    "correlation": 0.18652378022670746
   },
   "149": {
     "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_149",
     "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.1828869730234146
+    "correlation": -0.23098938167095184
   },
   "150": {
-    "name": "pragmatics_LIKE_150",
-    "constraint": "pragmatics",
-    "correlation": -0.1426233947277069
+    "name": "AUXILIARY_VERB_LIKE_LIKE_150",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.18519581854343414
   },
   "151": {
-    "name": "utf8_lead_LIKE_151",
-    "constraint": "utf8_lead",
-    "correlation": -0.2006477564573288
+    "name": "is_upper_LIKE_151",
+    "constraint": "is_upper",
+    "correlation": -0.15955348312854767
   },
   "152": {
-    "name": "is_digit_LIKE_152",
-    "constraint": "is_digit",
-    "correlation": 0.17749664187431335
+    "name": "pragmatics_LIKE_152",
+    "constraint": "pragmatics",
+    "correlation": -0.1930602341890335
   },
   "153": {
-    "name": "is_space_LIKE_153",
-    "constraint": "is_space",
-    "correlation": -0.18578316271305084
+    "name": "AUXILIARY_VERB_LIKE_LIKE_153",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.31339648365974426
   },
   "154": {
-    "name": "is_space_LIKE_154",
-    "constraint": "is_space",
-    "correlation": 0.23316539824008942
+    "name": "utf8_lead_LIKE_154",
+    "constraint": "utf8_lead",
+    "correlation": -0.1784301996231079
   },
   "155": {
-    "name": "pragmatics_LIKE_155",
-    "constraint": "pragmatics",
-    "correlation": 0.1817101091146469
+    "name": "ARTICLE_LIKE_155",
+    "constraint": "ARTICLE",
+    "correlation": -0.16603945195674896
   },
   "156": {
-    "name": "utf8_lead_LIKE_156",
-    "constraint": "utf8_lead",
-    "correlation": 0.23963850736618042
+    "name": "is_digit_LIKE_156",
+    "constraint": "is_digit",
+    "correlation": 0.28816384077072144
   },
   "157": {
-    "name": "is_digit_LIKE_157",
-    "constraint": "is_digit",
-    "correlation": 0.2486412525177002
+    "name": "is_punct_LIKE_157",
+    "constraint": "is_punct",
+    "correlation": 0.20233595371246338
   },
   "158": {
-    "name": "INTERROGATIVE_LIKE_158",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.1333324909210205
+    "name": "is_upper_LIKE_158",
+    "constraint": "is_upper",
+    "correlation": -0.19966743886470795
   },
   "159": {
-    "name": "PRONOUN_LIKE_159",
-    "constraint": "PRONOUN",
-    "correlation": -0.2294950783252716
+    "name": "pragmatics_LIKE_159",
+    "constraint": "pragmatics",
+    "correlation": -0.21629229187965393
   },
   "160": {
-    "name": "ARTICLE_LIKE_160",
-    "constraint": "ARTICLE",
-    "correlation": -0.09541846066713333
+    "name": "pragmatics_LIKE_160",
+    "constraint": "pragmatics",
+    "correlation": 0.312985360622406
   },
   "161": {
-    "name": "pragmatics_LIKE_161",
-    "constraint": "pragmatics",
-    "correlation": -0.16243566572666168
+    "name": "AUXILIARY_VERB_LIKE_LIKE_161",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.21769151091575623
   },
   "162": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_162",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.20538489520549774
+    "name": "is_space_LIKE_162",
+    "constraint": "is_space",
+    "correlation": 0.1567174643278122
   },
   "163": {
-    "name": "is_punct_LIKE_163",
-    "constraint": "is_punct",
-    "correlation": 0.16611111164093018
+    "name": "pragmatics_LIKE_163",
+    "constraint": "pragmatics",
+    "correlation": 0.2848016619682312
   },
   "164": {
-    "name": "is_alpha_LIKE_164",
-    "constraint": "is_alpha",
-    "correlation": -0.18641352653503418
+    "name": "pragmatics_LIKE_164",
+    "constraint": "pragmatics",
+    "correlation": -0.17746521532535553
   },
   "165": {
-    "name": "PREPOSITION_LIKE_LIKE_165",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.24083839356899261
+    "name": "is_digit_LIKE_165",
+    "constraint": "is_digit",
+    "correlation": -0.28765034675598145
   },
   "166": {
-    "name": "is_punct_LIKE_166",
-    "constraint": "is_punct",
-    "correlation": -0.15694689750671387
+    "name": "is_digit_LIKE_166",
+    "constraint": "is_digit",
+    "correlation": -0.15421311557292938
   },
   "167": {
-    "name": "is_upper_LIKE_167",
-    "constraint": "is_upper",
-    "correlation": -0.1973954141139984
+    "name": "is_alpha_LIKE_167",
+    "constraint": "is_alpha",
+    "correlation": -0.203097864985466
   },
   "168": {
-    "name": "is_punct_LIKE_168",
-    "constraint": "is_punct",
-    "correlation": 0.1862802654504776
+    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_168",
+    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
+    "correlation": -0.20962484180927277
   },
   "169": {
-    "name": "is_upper_LIKE_169",
-    "constraint": "is_upper",
-    "correlation": -0.14277881383895874
+    "name": "pragmatics_LIKE_169",
+    "constraint": "pragmatics",
+    "correlation": -0.2004457265138626
   },
   "170": {
-    "name": "ARTICLE_LIKE_170",
-    "constraint": "ARTICLE",
-    "correlation": 0.16853831708431244
+    "name": "is_digit_LIKE_170",
+    "constraint": "is_digit",
+    "correlation": 0.18284405767917633
   },
   "171": {
-    "name": "PREPOSITION_LIKE_LIKE_171",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": 0.19553451240062714
+    "name": "pragmatics_LIKE_171",
+    "constraint": "pragmatics",
+    "correlation": -0.21327410638332367
   },
   "172": {
-    "name": "pragmatics_LIKE_172",
-    "constraint": "pragmatics",
-    "correlation": 0.13544321060180664
+    "name": "is_upper_LIKE_172",
+    "constraint": "is_upper",
+    "correlation": -0.11074337363243103
   },
   "173": {
-    "name": "is_space_LIKE_173",
-    "constraint": "is_space",
-    "correlation": -0.11947521567344666
+    "name": "pragmatics_LIKE_173",
+    "constraint": "pragmatics",
+    "correlation": -0.2269228994846344
   },
   "174": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_174",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": 0.12240073829889297
+    "name": "is_upper_LIKE_174",
+    "constraint": "is_upper",
+    "correlation": 0.23046396672725677
   },
   "175": {
-    "name": "MOOD_NONE_LIKE_175",
-    "constraint": "MOOD:NONE",
-    "correlation": -0.12766101956367493
+    "name": "AUXILIARY_VERB_LIKE_LIKE_175",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.15522140264511108
   },
   "176": {
-    "name": "is_upper_LIKE_176",
-    "constraint": "is_upper",
-    "correlation": -0.25409218668937683
+    "name": "is_space_LIKE_176",
+    "constraint": "is_space",
+    "correlation": -0.19011639058589935
   },
   "177": {
-    "name": "pragmatics_LIKE_177",
-    "constraint": "pragmatics",
-    "correlation": -0.2515670657157898
+    "name": "is_alpha_LIKE_177",
+    "constraint": "is_alpha",
+    "correlation": 0.17911620438098907
   },
   "178": {
-    "name": "INTERROGATIVE_LIKE_178",
-    "constraint": "INTERROGATIVE",
-    "correlation": -0.19843599200248718
+    "name": "utf8_lead_LIKE_178",
+    "constraint": "utf8_lead",
+    "correlation": 0.1662452071905136
   },
   "179": {
-    "name": "pragmatics_LIKE_179",
-    "constraint": "pragmatics",
-    "correlation": 0.13326729834079742
+    "name": "is_upper_LIKE_179",
+    "constraint": "is_upper",
+    "correlation": 0.22795137763023376
   },
   "180": {
-    "name": "is_space_LIKE_180",
-    "constraint": "is_space",
-    "correlation": -0.20599499344825745
+    "name": "AUXILIARY_VERB_LIKE_LIKE_180",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.21228021383285522
   },
   "181": {
-    "name": "is_punct_LIKE_181",
-    "constraint": "is_punct",
-    "correlation": -0.20074909925460815
+    "name": "is_upper_LIKE_181",
+    "constraint": "is_upper",
+    "correlation": -0.22543027997016907
   },
   "182": {
-    "name": "is_punct_LIKE_182",
-    "constraint": "is_punct",
-    "correlation": 0.18285779654979706
+    "name": "is_upper_LIKE_182",
+    "constraint": "is_upper",
+    "correlation": -0.16467751562595367
   },
   "183": {
-    "name": "pragmatics_LIKE_183",
-    "constraint": "pragmatics",
-    "correlation": 0.19772647321224213
+    "name": "MOOD_NONE_LIKE_183",
+    "constraint": "MOOD:NONE",
+    "correlation": -0.2422817498445511
   },
   "184": {
-    "name": "is_alpha_LIKE_184",
-    "constraint": "is_alpha",
-    "correlation": 0.15106813609600067
+    "name": "PRONOUN_LIKE_184",
+    "constraint": "PRONOUN",
+    "correlation": 0.1522541344165802
   },
   "185": {
     "name": "is_punct_LIKE_185",
     "constraint": "is_punct",
-    "correlation": -0.1542765349149704
+    "correlation": -0.2482973337173462
   },
   "186": {
-    "name": "PREPOSITION_LIKE_LIKE_186",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.11352283507585526
+    "name": "pragmatics_LIKE_186",
+    "constraint": "pragmatics",
+    "correlation": -0.23376965522766113
   },
   "187": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_187",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.12936685979366302
+    "name": "is_punct_LIKE_187",
+    "constraint": "is_punct",
+    "correlation": 0.20692984759807587
   },
   "188": {
-    "name": "PREPOSITION_LIKE_LIKE_188",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": 0.13003599643707275
+    "name": "is_upper_LIKE_188",
+    "constraint": "is_upper",
+    "correlation": 0.21054676175117493
   },
   "189": {
-    "name": "ARTICLE_LIKE_189",
-    "constraint": "ARTICLE",
-    "correlation": -0.14470236003398895
+    "name": "is_punct_LIKE_189",
+    "constraint": "is_punct",
+    "correlation": 0.2099456489086151
   },
   "190": {
-    "name": "ARTICLE_LIKE_190",
-    "constraint": "ARTICLE",
-    "correlation": 0.16412997245788574
+    "name": "PART_OF_SPEECH_NONE_LIKE_190",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": 0.1500074416399002
   },
   "191": {
-    "name": "is_space_LIKE_191",
-    "constraint": "is_space",
-    "correlation": -0.1725447028875351
+    "name": "PRONOUN_LIKE_191",
+    "constraint": "PRONOUN",
+    "correlation": 0.2750159800052643
   },
   "192": {
-    "name": "pragmatics_LIKE_192",
-    "constraint": "pragmatics",
-    "correlation": -0.1801207810640335
+    "name": "is_upper_LIKE_192",
+    "constraint": "is_upper",
+    "correlation": -0.21985645592212677
   },
   "193": {
-    "name": "PRONOUN_LIKE_193",
-    "constraint": "PRONOUN",
-    "correlation": -0.0904524028301239
+    "name": "is_punct_LIKE_193",
+    "constraint": "is_punct",
+    "correlation": -0.17207323014736176
   },
   "194": {
-    "name": "NUMBER_NONE_LIKE_194",
-    "constraint": "NUMBER:NONE",
-    "correlation": -0.19270962476730347
+    "name": "PREPOSITION_LIKE_LIKE_194",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": -0.1484317183494568
   },
   "195": {
-    "name": "is_alpha_LIKE_195",
-    "constraint": "is_alpha",
-    "correlation": -0.25573766231536865
+    "name": "pragmatics_LIKE_195",
+    "constraint": "pragmatics",
+    "correlation": -0.19448475539684296
   },
   "196": {
-    "name": "pragmatics_LIKE_196",
-    "constraint": "pragmatics",
-    "correlation": -0.21192128956317902
+    "name": "utf8_lead_LIKE_196",
+    "constraint": "utf8_lead",
+    "correlation": 0.21569357812404633
   },
   "197": {
-    "name": "utf8_lead_LIKE_197",
-    "constraint": "utf8_lead",
-    "correlation": -0.2157706767320633
+    "name": "is_digit_LIKE_197",
+    "constraint": "is_digit",
+    "correlation": -0.17355427145957947
   },
   "198": {
-    "name": "tokenization_LIKE_198",
-    "constraint": "tokenization",
-    "correlation": 0.11553411930799484
+    "name": "PRONOUN_LIKE_198",
+    "constraint": "PRONOUN",
+    "correlation": 0.14526212215423584
   },
   "199": {
-    "name": "is_space_LIKE_199",
-    "constraint": "is_space",
-    "correlation": -0.12095525860786438
+    "name": "AUXILIARY_VERB_LIKE_LIKE_199",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.2545405924320221
   },
   "200": {
-    "name": "is_digit_LIKE_200",
-    "constraint": "is_digit",
-    "correlation": 0.17937101423740387
+    "name": "AUXILIARY_VERB_LIKE_LIKE_200",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": 0.23133358359336853
   },
   "201": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_201",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": -0.2888713479042053
+    "name": "is_upper_LIKE_201",
+    "constraint": "is_upper",
+    "correlation": -0.2153313010931015
   },
   "202": {
-    "name": "is_alpha_LIKE_202",
-    "constraint": "is_alpha",
-    "correlation": 0.20279575884342194
+    "name": "PART_OF_SPEECH_NONE_LIKE_202",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": 0.30285337567329407
   },
   "203": {
-    "name": "pragmatics_LIKE_203",
-    "constraint": "pragmatics",
-    "correlation": 0.20286640524864197
+    "name": "utf8_lead_LIKE_203",
+    "constraint": "utf8_lead",
+    "correlation": 0.18233132362365723
   },
   "204": {
     "name": "utf8_lead_LIKE_204",
     "constraint": "utf8_lead",
-    "correlation": -0.19148461520671844
+    "correlation": -0.178262859582901
   },
   "205": {
-    "name": "tokenization_LIKE_205",
-    "constraint": "tokenization",
-    "correlation": 0.18308518826961517
+    "name": "pragmatics_LIKE_205",
+    "constraint": "pragmatics",
+    "correlation": 0.1937912404537201
   },
   "206": {
-    "name": "pragmatics_LIKE_206",
-    "constraint": "pragmatics",
-    "correlation": 0.2494661509990692
+    "name": "is_punct_LIKE_206",
+    "constraint": "is_punct",
+    "correlation": 0.28532105684280396
   },
   "207": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_207",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.15323500335216522
+    "name": "is_digit_LIKE_207",
+    "constraint": "is_digit",
+    "correlation": 0.20960043370723724
   },
   "208": {
-    "name": "is_digit_LIKE_208",
-    "constraint": "is_digit",
-    "correlation": -0.18869557976722717
+    "name": "AUXILIARY_VERB_LIKE_LIKE_208",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.27578219771385193
   },
   "209": {
     "name": "utf8_lead_LIKE_209",
     "constraint": "utf8_lead",
-    "correlation": 0.1750795543193817
+    "correlation": -0.15989132225513458
   },
   "210": {
-    "name": "tokenization_LIKE_210",
-    "constraint": "tokenization",
-    "correlation": 0.19159311056137085
+    "name": "INTERROGATIVE_LIKE_210",
+    "constraint": "INTERROGATIVE",
+    "correlation": 0.20206648111343384
   },
   "211": {
-    "name": "is_space_LIKE_211",
-    "constraint": "is_space",
-    "correlation": -0.262334942817688
+    "name": "is_alpha_LIKE_211",
+    "constraint": "is_alpha",
+    "correlation": -0.12146615236997604
   },
   "212": {
-    "name": "pragmatics_LIKE_212",
-    "constraint": "pragmatics",
-    "correlation": 0.23541215062141418
+    "name": "is_alpha_LIKE_212",
+    "constraint": "is_alpha",
+    "correlation": 0.14640472829341888
   },
   "213": {
-    "name": "NUMBER_NONE_LIKE_213",
-    "constraint": "NUMBER:NONE",
-    "correlation": 0.1254105120897293
+    "name": "INTERROGATIVE_LIKE_213",
+    "constraint": "INTERROGATIVE",
+    "correlation": 0.13491332530975342
   },
   "214": {
-    "name": "ARTICLE_LIKE_214",
-    "constraint": "ARTICLE",
-    "correlation": 0.1344311386346817
+    "name": "pragmatics_LIKE_214",
+    "constraint": "pragmatics",
+    "correlation": 0.27409613132476807
   },
   "215": {
-    "name": "is_punct_LIKE_215",
-    "constraint": "is_punct",
-    "correlation": -0.16292937099933624
+    "name": "PREPOSITION_LIKE_LIKE_215",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": 0.2442030906677246
   },
   "216": {
-    "name": "DISCOVERED_AUXILIARY_VERB_LIKE_NONE_LIKE_216",
-    "constraint": "DISCOVERED_AUXILIARY_VERB_LIKE:NONE",
-    "correlation": 0.14599694311618805
+    "name": "PREPOSITION_LIKE_LIKE_216",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": -0.16157089173793793
   },
   "217": {
-    "name": "is_punct_LIKE_217",
-    "constraint": "is_punct",
-    "correlation": 0.20923647284507751
+    "name": "is_space_LIKE_217",
+    "constraint": "is_space",
+    "correlation": -0.15653274953365326
   },
   "218": {
-    "name": "utf8_lead_LIKE_218",
-    "constraint": "utf8_lead",
-    "correlation": -0.16495518386363983
+    "name": "ARTICLE_LIKE_218",
+    "constraint": "ARTICLE",
+    "correlation": 0.1642768681049347
   },
   "219": {
-    "name": "utf8_lead_LIKE_219",
-    "constraint": "utf8_lead",
-    "correlation": -0.1868019700050354
+    "name": "pragmatics_LIKE_219",
+    "constraint": "pragmatics",
+    "correlation": -0.33538395166397095
   },
   "220": {
-    "name": "is_punct_LIKE_220",
-    "constraint": "is_punct",
-    "correlation": 0.18182790279388428
+    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_220",
+    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
+    "correlation": -0.23411361873149872
   },
   "221": {
-    "name": "pragmatics_LIKE_221",
-    "constraint": "pragmatics",
-    "correlation": -0.2743466794490814
+    "name": "AUXILIARY_VERB_LIKE_LIKE_221",
+    "constraint": "AUXILIARY_VERB_LIKE",
+    "correlation": -0.1756531000137329
   },
   "222": {
-    "name": "NUMBER_NONE_LIKE_222",
-    "constraint": "NUMBER:NONE",
-    "correlation": 0.15037605166435242
+    "name": "PART_OF_SPEECH_NONE_LIKE_222",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": 0.17318250238895416
   },
   "223": {
-    "name": "is_digit_LIKE_223",
-    "constraint": "is_digit",
-    "correlation": -0.1855388879776001
+    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_223",
+    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
+    "correlation": 0.26663950085639954
   },
   "224": {
-    "name": "utf8_lead_LIKE_224",
-    "constraint": "utf8_lead",
-    "correlation": 0.2319469302892685
+    "name": "is_punct_LIKE_224",
+    "constraint": "is_punct",
+    "correlation": 0.23668505251407623
   },
   "225": {
-    "name": "INTERROGATIVE_LIKE_225",
-    "constraint": "INTERROGATIVE",
-    "correlation": 0.12350441515445709
+    "name": "PREPOSITION_LIKE_LIKE_225",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": 0.2265227735042572
   },
   "226": {
-    "name": "INTERROGATIVE_LIKE_226",
-    "constraint": "INTERROGATIVE",
-    "correlation": 0.16955357789993286
+    "name": "is_digit_LIKE_226",
+    "constraint": "is_digit",
+    "correlation": 0.12014231830835342
   },
   "227": {
-    "name": "tokenization_LIKE_227",
-    "constraint": "tokenization",
-    "correlation": 0.23360483348369598
+    "name": "is_digit_LIKE_227",
+    "constraint": "is_digit",
+    "correlation": -0.1535308063030243
   },
   "228": {
-    "name": "is_digit_LIKE_228",
-    "constraint": "is_digit",
-    "correlation": -0.1903461366891861
+    "name": "pragmatics_LIKE_228",
+    "constraint": "pragmatics",
+    "correlation": 0.1416889727115631
   },
   "229": {
-    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_229",
-    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
-    "correlation": 0.06863274425268173
+    "name": "PART_OF_SPEECH_NONE_LIKE_229",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.1845981776714325
   },
   "230": {
-    "name": "is_digit_LIKE_230",
-    "constraint": "is_digit",
-    "correlation": -0.1818724274635315
+    "name": "pragmatics_LIKE_230",
+    "constraint": "pragmatics",
+    "correlation": -0.18498703837394714
   },
   "231": {
-    "name": "is_punct_LIKE_231",
-    "constraint": "is_punct",
-    "correlation": 0.14975246787071228
+    "name": "is_upper_LIKE_231",
+    "constraint": "is_upper",
+    "correlation": -0.25451362133026123
   },
   "232": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_232",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.18552036583423615
+    "name": "pragmatics_LIKE_232",
+    "constraint": "pragmatics",
+    "correlation": -0.2944326102733612
   },
   "233": {
-    "name": "is_upper_LIKE_233",
-    "constraint": "is_upper",
-    "correlation": -0.13621510565280914
+    "name": "PART_OF_SPEECH_NONE_LIKE_233",
+    "constraint": "PART_OF_SPEECH:NONE",
+    "correlation": -0.20539556443691254
   },
   "234": {
-    "name": "DISCOVERED_PREPOSITION_LIKE_NONE_LIKE_234",
-    "constraint": "DISCOVERED_PREPOSITION_LIKE:NONE",
-    "correlation": -0.16902989149093628
+    "name": "pragmatics_LIKE_234",
+    "constraint": "pragmatics",
+    "correlation": 0.27088862657546997
   },
   "235": {
-    "name": "is_digit_LIKE_235",
-    "constraint": "is_digit",
-    "correlation": 0.18350617587566376
+    "name": "pragmatics_LIKE_235",
+    "constraint": "pragmatics",
+    "correlation": -0.455965518951416
   },
   "236": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_236",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.19214852154254913
+    "name": "PREPOSITION_LIKE_LIKE_236",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": -0.11336085200309753
   },
   "237": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_237",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.15446247160434723
+    "name": "PREPOSITION_LIKE_LIKE_237",
+    "constraint": "PREPOSITION_LIKE",
+    "correlation": 0.12406870722770691
   },
   "238": {
-    "name": "is_alpha_LIKE_238",
-    "constraint": "is_alpha",
-    "correlation": 0.2872452437877655
+    "name": "pragmatics_LIKE_238",
+    "constraint": "pragmatics",
+    "correlation": -0.25743356347084045
   },
   "239": {
-    "name": "is_space_LIKE_239",
-    "constraint": "is_space",
-    "correlation": -0.10287503898143768
+    "name": "is_punct_LIKE_239",
+    "constraint": "is_punct",
+    "correlation": -0.18427599966526031
   },
   "240": {
-    "name": "tokenization_LIKE_240",
-    "constraint": "tokenization",
-    "correlation": -0.14353574812412262
+    "name": "pragmatics_LIKE_240",
+    "constraint": "pragmatics",
+    "correlation": -0.33097365498542786
   },
   "241": {
-    "name": "is_digit_LIKE_241",
-    "constraint": "is_digit",
-    "correlation": 0.18066614866256714
+    "name": "is_punct_LIKE_241",
+    "constraint": "is_punct",
+    "correlation": 0.13429796695709229
   },
   "242": {
-    "name": "utf8_lead_LIKE_242",
-    "constraint": "utf8_lead",
-    "correlation": 0.205450177192688
+    "name": "MOOD_NONE_LIKE_242",
+    "constraint": "MOOD:NONE",
+    "correlation": -0.23522931337356567
   },
   "243": {
-    "name": "tokenization_LIKE_243",
-    "constraint": "tokenization",
-    "correlation": 0.10214243084192276
+    "name": "is_upper_LIKE_243",
+    "constraint": "is_upper",
+    "correlation": 0.16231010854244232
   },
   "244": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_244",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": 0.2579636573791504
+    "name": "is_punct_LIKE_244",
+    "constraint": "is_punct",
+    "correlation": 0.1816013753414154
   },
   "245": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_245",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.1898498237133026
+    "name": "pragmatics_LIKE_245",
+    "constraint": "pragmatics",
+    "correlation": -0.32363730669021606
   },
   "246": {
-    "name": "is_punct_LIKE_246",
-    "constraint": "is_punct",
-    "correlation": -0.17543768882751465
+    "name": "is_alpha_LIKE_246",
+    "constraint": "is_alpha",
+    "correlation": 0.23851892352104187
   },
   "247": {
-    "name": "is_space_LIKE_247",
-    "constraint": "is_space",
-    "correlation": 0.12686702609062195
+    "name": "pragmatics_LIKE_247",
+    "constraint": "pragmatics",
+    "correlation": -0.20958088338375092
   },
   "248": {
-    "name": "tokenization_LIKE_248",
-    "constraint": "tokenization",
-    "correlation": 0.15639302134513855
+    "name": "is_punct_LIKE_248",
+    "constraint": "is_punct",
+    "correlation": -0.2044038027524948
   },
   "249": {
-    "name": "is_digit_LIKE_249",
-    "constraint": "is_digit",
-    "correlation": -0.17007844150066376
+    "name": "is_upper_LIKE_249",
+    "constraint": "is_upper",
+    "correlation": -0.23922884464263916
   },
   "250": {
-    "name": "ARTICLE_LIKE_250",
-    "constraint": "ARTICLE",
-    "correlation": 0.1485976278781891
+    "name": "pragmatics_LIKE_250",
+    "constraint": "pragmatics",
+    "correlation": 0.17884708940982819
   },
   "251": {
-    "name": "AUXILIARY_VERB_LIKE_LIKE_251",
-    "constraint": "AUXILIARY_VERB_LIKE",
-    "correlation": -0.16218051314353943
+    "name": "is_upper_LIKE_251",
+    "constraint": "is_upper",
+    "correlation": -0.23148387670516968
   },
   "252": {
-    "name": "utf8_lead_LIKE_252",
-    "constraint": "utf8_lead",
-    "correlation": 0.29384657740592957
+    "name": "is_punct_LIKE_252",
+    "constraint": "is_punct",
+    "correlation": -0.1887456476688385
   },
   "253": {
-    "name": "PART_OF_SPEECH_NONE_LIKE_253",
-    "constraint": "PART_OF_SPEECH:NONE",
-    "correlation": -0.20380155742168427
+    "name": "is_alpha_LIKE_253",
+    "constraint": "is_alpha",
+    "correlation": -0.21486561000347137
   },
   "254": {
-    "name": "is_digit_LIKE_254",
-    "constraint": "is_digit",
-    "correlation": -0.11630447208881378
+    "name": "pragmatics_LIKE_254",
+    "constraint": "pragmatics",
+    "correlation": -0.29068422317504883
   },
   "255": {
-    "name": "PREPOSITION_LIKE_LIKE_255",
-    "constraint": "PREPOSITION_LIKE",
-    "correlation": -0.12394404411315918
+    "name": "is_space_LIKE_255",
+    "constraint": "is_space",
+    "correlation": -0.18180547654628754
   }
 }
