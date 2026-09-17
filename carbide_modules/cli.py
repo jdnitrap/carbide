@@ -735,7 +735,31 @@ def menu_discover():
     print("    model to actually use what was just found.")
 
 
+def _auto_load_checkpoint():
+    """Load the default checkpoint on startup, if one exists.
+
+    Without this, restarting the process always started from a blank
+    model regardless of what was on disk -- confusing now that training
+    autosaves to this same default file (see training.py), since a
+    finished run would silently "disappear" on the very next startup."""
+    filename = f"{config.checkpoint_dir}/carbide_ckpt.pt"
+    if not os.path.exists(filename):
+        return
+    print(f"\n  Found a saved checkpoint ({filename}) -- loading it...")
+    loaded = training.load_checkpoint("")
+    if not loaded:
+        # load_checkpoint() already printed why (most likely a
+        # constraint-schema mismatch from a newly discovered dimension).
+        # Offer the same migrate path resume_training() offers instead
+        # of silently leaving the model blank.
+        ans = input("  Migrate it to the current constraint schema and continue? "
+                     "New dimension(s) start untrained. [y/N]: ").strip().lower()
+        if ans == "y":
+            training.load_checkpoint("", allow_migrate=True)
+
+
 def main():
+    _auto_load_checkpoint()
     print("""
 ╔════════════════════════════════════════════════════════════════════════╗
 ║                CARBIDE INTERACTIVE CLI                                ║
