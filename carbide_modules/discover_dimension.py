@@ -2,28 +2,11 @@
 from real training data, fully automatically -- no human names or
 confirms anything. The one non-negotiable rule: every discovered column
 still gets a real, readable label, never a placeholder like dim_0 or
-DIMENSION_1. Readability is enforced two ways: (1) names are built from
-real signal (the known category a cluster's usage pattern most resembles
--- e.g. NOUN_LIKE), never a counter, and (2) a hard check refuses to
-persist anything that still looks like a placeholder, as a safety net.
+DIMENSION_1.
 
-Real technique, not invented: the distributional hypothesis (words that
-occur in similar contexts tend to share grammatical function) is a
-standard, citable basis for unsupervised word clustering in
-linguistics/NLP -- the same basis esgr's own discover_dimension.py cites
-(that version proposes clusters and waits for a human to name them; this
-one names them itself, adapted for Carbide's graph-free, byte-level
-design and the explicit later direction to drop the human step).
-
-"Context" is the POS tag of the neighboring word (via mdbe._pos_scan),
-mined straight from the real training corpus -- both for the unknown
-words being clustered, and for the reference: what (prev_pos, next_pos)
-pattern do words ALREADY known to be a NOUN/VERB/ADJECTIVE/etc actually
-have in this corpus? A new cluster is named after whichever known
-category its own dominant pattern matches; if none match well enough,
-it's named directly from the pattern itself (e.g. AFTER_ARTICLE_WORDS),
-which is still a real, readable description of a real, checkable fact
--- never a meaningless index.
+Auto-added columns sit BESIDE the six hex flags. They start as
+status=proposed with low confidence. After training, fix_dimensions()
+can lock word lists and raise confidence.
 """
 import json
 import os
@@ -39,18 +22,10 @@ _PLACEHOLDER_NAME_RE = re.compile(r"^DIM(ENSION)?[\s_-]?\d+$", re.IGNORECASE)
 
 
 def _is_covered(word: str) -> bool:
-    """True if word already has a real hand-given part-of-speech category
-    in mdbe.py -- these are NOT discovery candidates; the whole point is
-    finding what's not covered yet."""
     return _pos_scan(word) is not None
 
 
 def _context_signatures(words, include_word):
-    """{word: Counter({(prev_pos, next_pos): n})} over every position i
-    where include_word(words[i]) is True. prev_pos/next_pos come from
-    mdbe._pos_scan on the neighboring word (None for an uncovered or
-    missing neighbor -- a real, honest "unknown neighbor" state, not
-    guessed)."""
     sigs = defaultdict(Counter)
     for i in range(1, len(words) - 1):
         w = words[i]
@@ -69,20 +44,11 @@ def _read_corpus_words(corpus_path, sample_bytes):
 
 
 def mine_context_signatures(corpus_path, sample_bytes=2_000_000):
-    """Real pass over the actual training corpus, restricted to words
-    with no hand-given POS category yet -- the real discovery
-    candidates. Returns {word: Counter({(prev_pos, next_pos): n})}."""
     words = _read_corpus_words(corpus_path, sample_bytes)
     return _context_signatures(words, lambda w: not _is_covered(w))
 
 
 def reference_category_signatures(corpus_path, sample_bytes=2_000_000):
-    """The real, corpus-measured dominant (prev_pos, next_pos) pattern
-    for words ALREADY hand-categorized as each known part of speech --
-    "what does a typical NOUN actually sit next to in this text?" Used
-    to name new clusters by resemblance. Returns {category_name:
-    (prev_pos, next_pos)} for whichever categories have enough real
-    data in this corpus to have a dominant pattern at all."""
     words = _read_corpus_words(corpus_path, sample_bytes)
     by_category = defaultdict(Counter)
     for i in range(1, len(words) - 1):
@@ -96,15 +62,6 @@ def reference_category_signatures(corpus_path, sample_bytes=2_000_000):
 
 
 def propose_dimensions(corpus_path, sample_bytes=2_000_000, min_freq=50, min_cluster_size=10):
-    """Read-only. Mines real context signatures, then groups uncovered
-    words by their DOMINANT (prev_pos, next_pos) signature -- words
-    sharing the same most-common neighbor pattern are proposed as one
-    cluster. Only clusters with >= min_cluster_size real distinct words,
-    each seen >= min_freq times, are returned; small or noisy clusters
-    are real evidence of nothing and are dropped rather than proposed.
-
-    Returns a list of {signature, words, total_occurrences} dicts,
-    largest cluster first. Touches no files -- purely reads the corpus."""
     sigs = mine_context_signatures(corpus_path, sample_bytes)
     by_dominant_sig = defaultdict(list)
     for word, counter in sigs.items():
@@ -129,11 +86,6 @@ def propose_dimensions(corpus_path, sample_bytes=2_000_000, min_freq=50, min_clu
 
 
 def _signature_label(signature):
-    """A readable fallback name built directly from the real (prev_pos,
-    next_pos) pattern, for a cluster that doesn't resemble any known
-    category closely enough -- still a real, checkable description
-    (this cluster's words really do sit after an X and before a Y in
-    the corpus), never an arbitrary index."""
     prev_pos, next_pos = signature
     prev_part = f"AFTER_{prev_pos}" if prev_pos else "AT_START"
     next_part = f"BEFORE_{next_pos}" if next_pos else "AT_END"
@@ -141,13 +93,6 @@ def _signature_label(signature):
 
 
 def name_cluster(signature, reference_signatures):
-    """Automatic, readable name for one proposed cluster: the known
-    category whose own real corpus-measured signature matches this
-    cluster's signature exactly, suffixed "_LIKE" (same pattern as
-    esgr's own real discovered dimensions, ADJECTIVE_LIKE/NOUN_LIKE --
-    here computed automatically instead of picked by a person). Falls
-    back to a signature-derived label when no known category matches.
-    Returns (dimension_name, value_name)."""
     for category, ref_sig in reference_signatures.items():
         if ref_sig == signature:
             value_name = f"{category}_LIKE"
@@ -166,7 +111,8 @@ def _validate_real_name(name: str, kind: str):
         )
 
 
-def _persist(dimension_name: str, value_name: str, words, path):
+def _persist(dimension_name: str, value_name: str, words, path, status="proposed",
+             confidence=0.20, extra=None):
     _validate_real_name(dimension_name, "Dimension")
     _validate_real_name(value_name, "Value")
     discovered = {}
@@ -174,25 +120,113 @@ def _persist(dimension_name: str, value_name: str, words, path):
         with open(path) as f:
             discovered = json.load(f)
     key = dimension_name.strip().upper()
-    discovered[key] = {
+    prior = discovered.get(key) or {}
+    if prior.get("status") == "fixed" and status == "proposed":
+        status = "fixed"
+        confidence = float(prior.get("confidence", confidence))
+    entry = {
         "value_name": value_name.strip().upper(),
         "words": sorted(set(w.lower() for w in words)),
+        "status": status,
+        "confidence": float(confidence),
     }
+    if extra:
+        entry.update(extra)
+    discovered[key] = entry
     with open(path, "w") as f:
         json.dump(discovered, f, indent=2)
     return discovered[key]
 
 
+def load_discovered(path=DISCOVERED_PATH):
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
+def fix_dimensions(corpus_path, model=None, sample_bytes=2_000_000,
+                   min_keep_freq=20, path=DISCOVERED_PATH):
+    """Lock/prune auto-added columns after they have been seen in training.
+    Columns stay BESIDE the six hex flags.
+    """
+    discovered = load_discovered(path)
+    if not discovered:
+        return []
+
+    words = _read_corpus_words(corpus_path, sample_bytes)
+    freq = Counter(words)
+    report = []
+
+    for dim_name, entry in list(discovered.items()):
+        value_name = entry["value_name"]
+        old_words = list(entry.get("words") or [])
+        kept = [w for w in old_words if freq.get(w, 0) >= min_keep_freq]
+        if len(kept) < 3:
+            kept = old_words[:10]
+        status = "fixed" if len(kept) >= 8 else "proposed"
+        confidence = 0.35 if status == "fixed" else 0.20
+        extra = {"fixed_from_corpus": True, "word_count": len(kept)}
+
+        if model is not None:
+            try:
+                delta = _column_sensitivity(model, dim_name)
+                extra["loss_delta"] = round(delta, 6)
+                if delta >= 0.002:
+                    status = "fixed"
+                    confidence = min(0.55, 0.20 + 10.0 * delta)
+                elif delta < 0.0005:
+                    status = "proposed"
+                    confidence = 0.15
+            except Exception as exc:
+                extra["sensitivity_error"] = str(exc)
+
+        _persist(dim_name, value_name, kept, path, status=status,
+                 confidence=confidence, extra=extra)
+        report.append({
+            "dimension_name": dim_name,
+            "value_name": value_name,
+            "status": status,
+            "confidence": confidence,
+            "words": kept,
+        })
+    return report
+
+
+def _column_sensitivity(model, dim_name, batches=4, seq_len=128):
+    import torch
+    import torch.nn.functional as F
+    from . import dataset
+    from .mdbe import CONSTRAINT_COLUMN_NAMES, all_constraints
+
+    if dim_name not in CONSTRAINT_COLUMN_NAMES:
+        return 0.0
+    idx = CONSTRAINT_COLUMN_NAMES.index(dim_name)
+    model.eval()
+    deltas = []
+    with torch.no_grad():
+        for _ in range(batches):
+            xb, yb = dataset.get_batch(seq_len=seq_len)
+            live = model(xb, mode="full")
+            loss_live = F.cross_entropy(live.reshape(-1, 256), yb.reshape(-1))
+            cols = all_constraints(xb).clone()
+            cols[..., idx] = 0
+            learned = model.mdbe.base(xb)
+            x0 = model.mdbe.proj(torch.cat([learned, cols], dim=-1))
+            x0 = x0 + model.local_conv(x0)
+            for block in model.blocks:
+                x0 = block(x0, cols)
+            loss_off = F.cross_entropy(
+                model.head(model.head_norm(x0)).reshape(-1, 256),
+                yb.reshape(-1),
+            )
+            deltas.append((loss_off - loss_live).item())
+    model.train()
+    return sum(deltas) / max(len(deltas), 1)
+
+
 def discover(corpus_path, sample_bytes=2_000_000, min_freq=50, min_cluster_size=10,
              path=DISCOVERED_PATH):
-    """The full automatic pipeline: mine the real corpus, cluster
-    uncovered words, name each cluster from real distributional
-    resemblance to a known category (or, failing that, from its own
-    real context pattern), and persist every result -- no human step.
-    Two clusters that would auto-name identically get a real, readable
-    disambiguator appended (their most frequent distinct word), never a
-    bare counter. Returns the list of {dimension_name, value_name,
-    words} dicts that were written."""
     proposals = propose_dimensions(corpus_path, sample_bytes, min_freq, min_cluster_size)
     reference = reference_category_signatures(corpus_path, sample_bytes)
 
