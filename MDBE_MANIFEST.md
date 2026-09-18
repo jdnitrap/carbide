@@ -1,5 +1,8 @@
 # MDBE Column Manifest
 
+**Start here if you do not write programs:** [HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+This file is the technical notebook: which columns exist and what they mean.
+
 **Official layout: grammar BESIDE the six hex flags, never inside them.**
 
 The row ID is the real byte (`0x00`–`0xFF`). The six flags decode that
@@ -7,6 +10,15 @@ hex. Language-mechanics columns are extra named dimensions on the same
 row-for-this-position. An experiment that projected grammar into the
 six axes ("inside") is not the default: it can shave a little loss but
 it destroys the meaning of `is_digit`.
+
+The intended three notebooks:
+
+- Layer 1 — letter book (this file’s six flags)
+- Layer 2 — word book (grammar columns, later a real word row)
+- Layer 3 — sentence book (sentence facts on a packed slot)
+
+All three stay named and dumpable. Values may be mixed for the guessing
+engine; names stay on the strip.
 
 
 task1 refinement #5. Documents exactly which of MDBE's per-byte columns are
