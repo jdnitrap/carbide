@@ -1,5 +1,14 @@
 # MDBE Column Manifest
 
+**Official layout: grammar BESIDE the six hex flags, never inside them.**
+
+The row ID is the real byte (`0x00`–`0xFF`). The six flags decode that
+hex. Language-mechanics columns are extra named dimensions on the same
+row-for-this-position. An experiment that projected grammar into the
+six axes ("inside") is not the default: it can shave a little loss but
+it destroys the meaning of `is_digit`.
+
+
 task1 refinement #5. Documents exactly which of MDBE's per-byte columns are
 learned vs. hand-defined, and what each hand-defined one encodes — this used
 to only be readable by reading `mdbe_constraints()` in `carbide_modules/mdbe.py`
@@ -14,6 +23,7 @@ concatenation of two blocks:
 |---|---|---|---|
 | `base(byte)` | `d_model` (256 by default) | `nn.Embedding(256, d_model)` | yes — trained by gradient descent, no defined meaning per-dimension |
 | constraint flags | 6 | `mdbe_constraints()` | no — deterministic function of the byte value, recomputed every forward pass, never touched by the optimizer |
+| language mechanics | `NUM_LANGUAGE_MECHANICS` | `language_mechanics_constraints()` | no — rules on the current word/clause; **beside** the six flags, never mixed into them |
 
 `MDBE.proj` (a `Linear(d_model + TOTAL_CONSTRAINTS, d_model)`) then
 projects the learned row + **all** constraint columns (6 facts + grammar)
@@ -26,7 +36,7 @@ task1 refinement #1 (re-injecting the constraint flags at every SSM block
 via `Block.constraint_proj`) exists precisely because of this: without it,
 the six raw flags are visible to the network exactly once, at the very
 first projection, and get progressively blended away by every layer after
-that.
+that. Re-injection uses the **full beside strip** (6 + grammar).
 
 ## The six hand-defined columns
 
@@ -85,11 +95,14 @@ same-class bytes (e.g. all digit bytes) actually drift closer together in
 the learned embedding space over training, rather than assuming they do.
 
 The ablation study (`Run ablation study` in the menu) trains four
-variants — `full` (6 facts + soft grammar), `flags_only` (6 facts,
+variants — `full` (6 facts + soft grammar **beside**), `flags_only` (6 facts,
 grammar zeroed), `no_constraints` (all constraint columns zeroed),
 `plain_embedding` (projection skipped, raw embedding only).
 `flags_only` vs `full` is the grammar-expansion test; `flags_only` vs
 `no_constraints` retests the original 6 facts.
+
+There is **no** `inside_6` default. Grammar is not projected into the six
+hex-decode axes.
 
 ## What the ablation actually showed (2026-09-11, 3 seeds, 1500 steps/variant each, d_model=256/n_layers=4/d_state=32, real 5MB corpus)
 
