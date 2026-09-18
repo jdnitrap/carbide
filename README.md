@@ -1,147 +1,55 @@
-# Carbide — Byte-Level Selective State-Space Language Model
+# Carbide
 
-A from-scratch (not adapted from any tutorial/existing codebase), CPU-only
-byte-level language model in the Mamba/SSM family, with a custom
-per-byte embedding design ("MDBE") that hand-codes free structural facts
-about bytes instead of asking the model to re-derive them from data.
+Carbide is a small program that reads text the way a person does it in stages: **letter → word → sentence**. It writes each stage in a notebook with names you can open and check.
 
-Conceived 2026-09-11. This is the active, primary Carbide implementation —
-see the sibling repos below for architecture-exploration side projects
-that deliberately do **not** modify this one.
+You do not need to be a programmer to understand the idea. The short tour is [HOW_IT_WORKS.md](HOW_IT_WORKS.md).
 
-## Hardware constraint (shapes every design decision here)
+## What it is, in one screen
 
-12-core AMD Ryzen AI 7 445, Radeon 840M integrated GPU only (**no CUDA**),
-30GB RAM. Everything is CPU-only by necessity — there are no `.cuda()`
-calls anywhere in this codebase.
+| Stage | Notebook | What it writes |
+|---|---|---|
+| Layer 1 | Letter book | The real letter ID, plus six yes/no facts (letter? number? capital? punctuation? space? start of a multi-byte character?) |
+| Layer 2 | Word book | The word those letters just spelled, plus grammar columns (article, noun, verb, …) |
+| Layer 3 | Sentence book | A short summary of the words so far, plus sentence facts (statement, question, command, negated, …) |
 
-## What it is today
+A guessing engine then tries to predict the **next letter**. The engine is a *selective state-space model* (same family as “Mamba”). That is a technical name for a reader with a working memory that updates as each letter arrives. It is **not** the notebooks. The notebooks stay readable.
 
-**MDBE (the user's own embedding design):** BPE's head start, but the
-row ID is the real byte (`0x74` = `t`, ASCII/UTF-8 — not a scrap ID)
-and extra structure is **named columns**, not new mystery rows.
+## Design rules (the team’s contract)
 
-Layout is **beside, not inside**:
+1. The letter’s ID is the real letter the computer already uses — not a made-up locker number.
+2. Letter facts and grammar facts stay in **separate columns**. We never hide “verb” inside “is this a digit?”
+3. All three layers can be printed with names. If you cannot dump them, the design has slipped.
+4. This copy of the program runs on an ordinary home CPU. It does not need a data-center graphics card.
+
+## What this is not
+
+It is not ChatGPT. It is not a finished product that answers questions. It is a research program for studying a *labeled* way to read text, small enough to run and inspect at home.
+
+## For people who will run the code
+
+From this folder:
 
 ```
-[ learned Embedding(256, d_model) | 6 hex-decode flags | grammar / language-mechanics ]
-                                   concatenated, then Linear → one d_model vector
+python3 -m carbide_modules
 ```
 
-- **Rows** = bytes 0x00–0xFF.
-- **Layer 1 / six flags** (`is_alpha`, `is_digit`, `is_upper`, `is_punct`,
-  `is_space`, `utf8_lead`) decode the hex. Hard 0/1 facts about that byte.
-- **Layer 2 / language mechanics** sit in their own columns next to those
-  six. Rules group bytes into words/clauses and fill ARTICLE, NOUN, tense,
-  etc. Those fills are soft scores (guesses), not switches, and they are
-  never mashed into the six hex flags.
-- Unnamed `cell_*` dimensions are the learned rest of the row.
+That opens a menu: train, generate, save tables, compare versions.
 
-Full column-by-column documentation: `MDBE_MANIFEST.md`.
+- Training books: `carbide_training_dataset.txt`
+- Letter table export: `mdbe_table.csv`
+- Column-by-column technical list: [MDBE_MANIFEST.md](MDBE_MANIFEST.md)
+- History of experiments: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)
 
-**Why SSM over Transformer:** linear-cost recurrent state vs.
-Transformer attention's O(n²) — chosen deliberately for this CPU-only
-hardware budget.
+Default size (menu model): width 256, 4 layers. Smaller test runs are fine while you check the notebooks.
 
-**Chunked parallel scan** (`SelectiveSSM._chunked_scan()` in
-`carbide_modules/mdbe.py`): the original sequential Python
-`for t in range(T)` loop scaled catastrophically (43x more params →
-57x slower, not 43x, because per-timestep Python dispatch overhead
-compounds across layers × timesteps, not FLOPs). The chunked scan fixed
-this to ~linear scaling. Verified against the literal sequential
-reference on both values and gradients, float32 and float64, many T /
-chunk-size combinations — see `tests/test_scan.py` (re-run this session,
-all pass).
+## Project layout
 
-**Incremental (cached) decoding** (`carbide_modules/incremental.py`,
-wired into `generation.py`): carries each Block's recurrent state and
-`LocalByteConv`'s causal window buffer across calls instead of
-recomputing a full forward pass over the whole context for every
-generated byte. Measured **~63x faster per byte** than full
-recomputation at seq_len=128 context (built and benchmarked as a
-prototype in the sibling `carbide_speculative/` repo, then integrated
-for real here). Verified bit-for-bit equivalent to the old
-full-recompute path — `tests/test_incremental_decode.py` (re-run this
-session, all pass, max diff ~1e-6, float32 noise level).
+- `carbide_modules/` — the program
+- `tests/` — checks that the reader and the notebooks still agree with themselves
+- `HOW_IT_WORKS.md` — this idea in everyday language
+- `MDBE_MANIFEST.md` — the named columns in full
+- `_archive/` and `carbide_module_cplusplus/` — older or side work, not the active program
 
-**Re-injected constraint flags** (`Block.constraint_proj`): the 6 MDBE
-flags are re-injected at every SSM block, not just once at input —
-without this they get progressively blended away by later layers.
-Confirmed by a **3-seed ablation** (not just one run, which looked
-equivocal and would have been misleading): `full` embedding beats
-`no_constraints` beats `plain_embedding`, consistently, in all 3 seeds,
-with the gap *growing* rather than shrinking. Full numbers and
-methodology: `MDBE_MANIFEST.md`.
+## Status
 
-**Causal local byte convolution** (`LocalByteConv`, depthwise,
-left-padded only): local byte-aggregation right after MDBE. Causality
-verified by perturbation test (future bytes provably don't affect past
-outputs).
-
-**SFT (supervised fine-tuning)** (`carbide_modules/sft.py`): fine-tunes
-in place from a pretrained checkpoint, loss masked to response tokens
-only. Masking correctness verified three ways, including a scrambling
-test proving prompt-position targets contribute exactly 0.0 to loss —
-`tests/test_sft.py` (re-run this session, all pass).
-
-**Default scale:** d_model=256, n_layers=4, d_state=32 (571,392 params
-— corrected after finding `Block.__init__` had silently never forwarded
-`d_state` to `SelectiveSSM`, so it ran at the hardcoded default 16 for a
-while; relative ablation comparisons were unaffected since the bug
-applied uniformly). Sized against the real 5MB training corpus
-(`carbide_training_dataset.txt`, ~9.6 bytes/param) to avoid overfitting
-risk, not the largest size that would technically fit in memory.
-
-## Structure
-
-- `carbide_modules/` — the active package (`python3 -m carbide_modules`
-  from this directory)
-- `carbide_module_cplusplus/` — a full, independent C++ rewrite (own
-  hand-written reverse-mode autodiff tensor engine, zero external
-  dependencies). **Built, gradient-checked, benchmarked, and
-  deliberately set aside** — PyTorch was measured ~5x faster
-  (39.7 vs 7.7 steps/sec) before a perf pass, ~1.9x after, because
-  PyTorch's backend is BLAS-optimized/fused/multi-threaded and the
-  hand-rolled engine isn't. Decision: focus stays on `carbide_modules/`
-  (Python) — it runs, most AI tooling is Python anyway, easier to read,
-  more reference material available. Left clean and fully verified, not
-  the active target.
-- `_archive/` — earlier single-file/TUI implementations, kept for
-  reference, not maintained
-- `tests/` — `test_scan.py`, `test_incremental_decode.py`, `test_sft.py`
-  (all re-verified passing this session)
-- `MDBE_MANIFEST.md` — detailed column-by-column embedding
-  documentation + the full 3-seed ablation study with real numbers
-- `mdbe_snapshots/` — periodic embedding-table snapshots during
-  training (for checking whether same-class bytes drift together over
-  time)
-- `mdbe_table.csv` / `mdbe_table.xlsx` — exported per-byte embedding +
-  flag state
-
-## What it should / might do
-
-Deliberately **not yet done / scoped down**, per the project's own
-History:
-- No hyperparameter search/sweep
-- SFT dataset is 22 hand-written toy examples — a mechanism
-  demonstration, not real instruction-tuning capability
-- The bigger "low single-digit millions" params tier (task1's original
-  stretch target) is verified to train cleanly and is one menu visit
-  away, but not adopted by default — would need more real corpus first
-  to avoid overfitting
-
-**Where the sibling side-project repos fit in:** `new_carbide_architect`,
-`carbide_synthesis`, `carbide_speculative`, and `carbide_scout` all
-explore genuinely different mechanisms (routed experts, holographic
-reduced representations, NCA+reservoir hybrids, speculative decoding,
-fused self-speculative architectures) as isolated experiments that
-deliberately never modify this codebase — see each repo's own README
-for what was found. If any of them is ever promoted into production
-use here, it happens as a deliberate, separate integration decision,
-not a silent merge.
-
-## Track record
-
-See `EXPERIMENT_LOG.md` for the project history (bugs found and fixed,
-benchmark findings, the C++ rewrite decision) and `MDBE_MANIFEST.md` for
-the detailed ablation study.
+The letter book and the “facts sit beside grammar” rule are the documented baseline on this branch. The word book and sentence book are the intended next notebooks in the same design. Training on the included books does reduce error. That is a health check, not a claim that the program understands language.
