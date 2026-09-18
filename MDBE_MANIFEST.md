@@ -15,12 +15,12 @@ concatenation of two blocks:
 | `base(byte)` | `d_model` (256 by default) | `nn.Embedding(256, d_model)` | yes — trained by gradient descent, no defined meaning per-dimension |
 | constraint flags | 6 | `mdbe_constraints()` | no — deterministic function of the byte value, recomputed every forward pass, never touched by the optimizer |
 
-`MDBE.proj` (a `Linear(d_model+6, d_model)`) then projects this
-`(d_model+6)`-wide concatenation back down to `d_model`. **Important:** this
-projection is a dense matmul — it mixes the 6 defined columns together with
-the learned ones. There is no surviving "column 3 is always is_digit" in the
-`d_model`-wide representation that comes out of `MDBE.forward`. The
-traceable point is the *input* to `.proj`, not its output.
+`MDBE.proj` (a `Linear(d_model + TOTAL_CONSTRAINTS, d_model)`) then
+projects the learned row + **all** constraint columns (6 facts + grammar)
+back down to `d_model`. That is the single combined embedding. **Important:**
+this projection is a dense matmul — there is no surviving "column 3 is
+always is_digit" in the `d_model`-wide vector that comes out of
+`MDBE.forward`. The traceable point is the *input* to `.proj`, not its output.
 
 task1 refinement #1 (re-injecting the constraint flags at every SSM block
 via `Block.constraint_proj`) exists precisely because of this: without it,
@@ -46,6 +46,34 @@ Each is a 0/1 float, always computed live and correct (never learned, never
 wrong) — that's the entire point of hand-defining them rather than hoping
 the model discovers "0x30-0x39 are digits" from data on its own.
 
+## Grammar dimensions (soft, not 0/1)
+
+These are the original MDBE idea extended past ASCII: hand-coded structure
+about the *word / clause*, concatenated with the 6 facts and the learned
+row, then projected into one vector.
+
+They are **not** facts. A closed-class hit (`the` → ARTICLE) is almost
+certain; a suffix guess and a clause role are not; a discovered `*_LIKE`
+cluster is a blob from this corpus. So the writer now stores a confidence
+instead of 1.0, and that group's `:NONE` column gets `1 - confidence`.
+
+| kind | typical confidence |
+|---|---|
+| 6 byte flags | 1.0 (still hard bits) |
+| closed-class POS / pronoun grammar | 0.95 / 0.90 |
+| morphology suffix | 0.70 (0.85 if irregular-list hit) |
+| open-class POS lists | 0.45 |
+| syntax / voice / mood / aspect guesses | 0.40 |
+| discovered `*_LIKE` clusters | 0.20 |
+
+Checkpoint shapes are unchanged (`TOTAL_CONSTRAINTS` is the same). Only
+the numbers written into the grammar columns changed.
+
+Ablation modes now include `flags_only`: live 6 facts, grammar block
+zeroed. That is the test of "did growing MDBE past the 6 flags help?"
+The 2026-09-11 numbers below only compare the original 6 flags against
+no flags. They do not cover this grammar stack.
+
 ## Checking whether they're actually helping
 
 `mdbe_table.csv` (Save Outputs) and the files in `mdbe_snapshots/`
@@ -56,12 +84,12 @@ Comparing snapshots across training steps is how to check whether
 same-class bytes (e.g. all digit bytes) actually drift closer together in
 the learned embedding space over training, rather than assuming they do.
 
-The ablation study (`Run ablation study` in the menu, refinement #3) trains
-three variants — `full` (both learned embedding and constraint flags),
-`no_constraints` (flags zeroed, everything else identical), `plain_embedding`
-(flags AND the projection skipped entirely, raw embedding only) — for real
-evidence on whether the constraint columns help loss/convergence, rather
-than assuming they do.
+The ablation study (`Run ablation study` in the menu) trains four
+variants — `full` (6 facts + soft grammar), `flags_only` (6 facts,
+grammar zeroed), `no_constraints` (all constraint columns zeroed),
+`plain_embedding` (projection skipped, raw embedding only).
+`flags_only` vs `full` is the grammar-expansion test; `flags_only` vs
+`no_constraints` retests the original 6 facts.
 
 ## What the ablation actually showed (2026-09-11, 3 seeds, 1500 steps/variant each, d_model=256/n_layers=4/d_state=32, real 5MB corpus)
 
