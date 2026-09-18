@@ -1,5 +1,10 @@
 # Experiment / Verification Log
 
+**In everyday language:** this page is the lab diary. It is a list of
+bugs we found, checks we ran, and what we decided to keep or set aside.
+You do not need it to understand Carbide. For that, start at
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+
 See also `MDBE_MANIFEST.md` for the detailed 3-seed constraint-flag
 ablation study (kept separate since it's already a complete, self-
 contained experimental writeup).
