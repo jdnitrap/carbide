@@ -17,16 +17,27 @@ calls anywhere in this codebase.
 
 ## What it is today
 
-**MDBE (the user's own embedding design):** each of 256 embedding rows
-= one raw byte value (0x00–0xFF) — a complete closed alphabet, unlike a
-curated BPE vocabulary. Each row combines a learned
-`nn.Embedding(256, d_model)` vector with 6 hand-coded deterministic
-flags (`is_alpha`, `is_digit`, `is_upper`, `is_punct`, `is_space`,
-`utf8_lead`), concatenated and projected back down via `Linear`.
-Rationale: don't spend a tiny model's parameter budget re-deriving free
-character-class facts from data; `utf8_lead` also signals multi-byte
-UTF-8 continuation. Full column-by-column documentation:
-`MDBE_MANIFEST.md`.
+**MDBE (the user's own embedding design):** BPE's head start, but the
+row ID is the real byte (`0x74` = `t`, ASCII/UTF-8 — not a scrap ID)
+and extra structure is **named columns**, not new mystery rows.
+
+Layout is **beside, not inside**:
+
+```
+[ learned Embedding(256, d_model) | 6 hex-decode flags | grammar / language-mechanics ]
+                                   concatenated, then Linear → one d_model vector
+```
+
+- **Rows** = bytes 0x00–0xFF.
+- **Layer 1 / six flags** (`is_alpha`, `is_digit`, `is_upper`, `is_punct`,
+  `is_space`, `utf8_lead`) decode the hex. Hard 0/1 facts about that byte.
+- **Layer 2 / language mechanics** sit in their own columns next to those
+  six. Rules group bytes into words/clauses and fill ARTICLE, NOUN, tense,
+  etc. Those fills are soft scores (guesses), not switches, and they are
+  never mashed into the six hex flags.
+- Unnamed `cell_*` dimensions are the learned rest of the row.
+
+Full column-by-column documentation: `MDBE_MANIFEST.md`.
 
 **Why SSM over Transformer:** linear-cost recurrent state vs.
 Transformer attention's O(n²) — chosen deliberately for this CPU-only
@@ -110,7 +121,7 @@ risk, not the largest size that would technically fit in memory.
 ## What it should / might do
 
 Deliberately **not yet done / scoped down**, per the project's own
-history:
+History:
 - No hyperparameter search/sweep
 - SFT dataset is 22 hand-written toy examples — a mechanism
   demonstration, not real instruction-tuning capability
