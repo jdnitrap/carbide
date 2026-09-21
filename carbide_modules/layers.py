@@ -240,6 +240,7 @@ class LayerStack(nn.Module):
             if pack_state is None:
                 packed = causal_pack(l2, sent_ids)
             else:
+                # Incremental decode: pack_state = [run, n, last_sid], B=1.
                 run, n, last_sid = pack_state
                 packed = torch.zeros_like(l2)
                 for t in range(l2.shape[1]):
@@ -261,3 +262,15 @@ class LayerStack(nn.Module):
             x = self.byte(bytes_seq)
         s["pack_state"] = pack_state
         return self.mix(x), s
+
+
+def named_values(s, batch=0, pos=0):
+    """Traceable dump: each named column next to its number at one byte."""
+    rows = []
+    for i, name in enumerate(L1_NAMES):
+        rows.append(("L1", name, float(s["flags"][batch, pos, i])))
+    for i, name in enumerate(L2_GRAMMAR_NAMES):
+        rows.append(("L2", name, float(s["grammar"][batch, pos, i])))
+    for i, name in enumerate(L3_NAMES):
+        rows.append(("L3", name, float(s["l3"][batch, pos, i])))
+    return rows
