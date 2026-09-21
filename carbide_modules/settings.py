@@ -42,6 +42,14 @@ def _structural(attr):
     return (lambda: getattr(config, attr)), set_
 
 
+def _soft_grammar():
+    from . import mdbe
+
+    def set_(v):
+        mdbe.SOFT_GRAMMAR = v
+    return (lambda: mdbe.SOFT_GRAMMAR), set_
+
+
 def _policy(name):
     def _store():
         if not os.path.exists(config.graph_db):
@@ -85,11 +93,18 @@ def _build():
     add("model.d_model", "int", "file", "embedding width (rebuilds the model)", _structural("d_model"), lo=4, hi=2048)
     add("model.n_layers", "int", "file", "SSM blocks (rebuilds the model)", _structural("n_layers"), lo=1, hi=32)
     add("model.d_state", "int", "file", "state size per SSM (rebuilds the model)", _structural("d_state"), lo=2, hi=256)
+    add("model.soft_grammar", "bool", "file", "grammar columns hold rule confidences (on) or hard 1.0 (off); a checkpoint keeps the mode it trained on",
+        _soft_grammar())
     add("train.batch_size", "int", "file", "sequences per step", _cfg("batch_size"), lo=1, hi=256)
     add("train.seq_len", "int", "file", "context window in bytes", _cfg("seq_len"), lo=8, hi=8192)
     add("train.learning_rate", "float", "file", "AdamW learning rate (applies immediately)", _lr_pair(), lo=1e-6, hi=1.0)
     add("train.autosave_interval", "int", "file", "steps between automatic checkpoints",
         _cfg("checkpoint_autosave_interval"), lo=1, hi=10_000_000)
+    add("train.auto_grow", "bool", "file", "add depth when loss plateaus; kept only if held-out loss improves (off = never)",
+        _gen("train_auto_grow", False))
+    add("train.max_layers", "int", "file", "auto-grow never goes past this many blocks", _gen("train_max_layers", 8), lo=1, hi=64)
+    add("train.growth_min_gain", "float", "file", "loss must improve less than this over 100 steps to count as a plateau",
+        _gen("train_growth_min_gain", 0.01), lo=0.0, hi=1.0)
     add("train.snapshot_interval", "int", "file", "steps between MDBE table snapshots",
         _cfg("mdbe_snapshot_interval"), lo=1, hi=10_000_000)
     add("gen.temperature", "float", "file", "sampling temperature (0 = greedy)", _gen("gen_temperature", generation.DEFAULTS[0]), lo=0.0, hi=5.0)
@@ -129,6 +144,12 @@ def parse(s, raw):
     text = str(raw).strip().lower()
     if s.nullable and text in ("off", "none", "null"):
         return None
+    if s.kind == "bool":
+        if text in ("on", "true", "yes", "1"):
+            return True
+        if text in ("off", "false", "no", "0"):
+            return False
+        raise ValueError(f"{s.name} takes on/off")
     if s.kind == "choice":
         if text not in s.choices:
             raise ValueError(f"{s.name} must be one of: {', '.join(s.choices)}")

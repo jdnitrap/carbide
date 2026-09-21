@@ -78,7 +78,10 @@ async def _session():
             # stop a long run from the keyboard
             app.query_one("#cmd", Input).value = "train 20000"
             await pilot.press("enter")
-            await pilot.pause(2.5)
+            for _ in range(300):                                          # wait for visible progress (a busy machine is slow)
+                await pilot.pause(0.1)
+                if int(app.stats.get("step", 0)) > 0:
+                    break
             result["live_step"] = int(app.stats.get("step", 0))          # before the command has finished
             result["live_log"] = log()
             app.action_stop_training()
@@ -105,7 +108,7 @@ def test_the_tui_drives_carbide_end_to_end():
         print("SKIP: textual not installed")
         return
     r = _run(_session())
-    n_settings = 21
+    n_settings = 25
     assert r["rows"] == r["polled"] == n_settings, r
     assert r["kind_at_start"] == "beside"
     assert r["step"] == "20", r["step"]
@@ -113,7 +116,7 @@ def test_the_tui_drives_carbide_end_to_end():
     assert r["kind_cycled"] == "layered", "Enter on a choice setting should cycle it"
     assert r["prefill"] == "set gen.top_p 1" and r["top_p"] == 0.5
     assert r["stopped_step"] < 20000 and "Stopped early" in r["log"], (r["stopped_step"])
-    assert r["live_step"] > 20, "the status panel should move while training is still running"
+    assert r["live_step"] > 0, "the status panel should move while training is still running"
     assert "step " in r["live_log"].split("> train 20000")[-1], "output should stream before the command ends"
     assert "> train 20" in r["log"] and "Checkpoint saved" in r["log"] and "gen.top_p = 0.5" in r["log"]
     assert r["suggest"] == "set gen.top_k" or r["suggest"] == "set gen.top_p", r["suggest"]

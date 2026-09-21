@@ -31,8 +31,8 @@ from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static
 
 POLLS = ("status", "set json")   # "set json" must stay last: its arrival triggers the panel redraw
 COMMANDS = ("help", "status", "train", "reset", "generate", "preset", "set", "save", "load", "checkpoints",
-            "data", "graph", "quit")
-GRAPH_SUBS = ("stats", "build-core", "ingest", "import-dimensions", "teach", "refresh", "report")
+            "data", "graph", "teacher", "quit")
+GRAPH_SUBS = ("stats", "build-core", "ingest", "import-dimensions", "teach", "facts", "fact-corpus", "refresh", "report")
 PRESETS = ("calm", "balanced", "wild")
 FORMATS = ("triples", "glossary", "text")
 WHERE_MARK = {"file": "f", "graph": "g"}
@@ -296,6 +296,9 @@ class CarbideApp(App):
         name = event.row_key.value
         row = next((s for s in self.settings if s["name"] == name), None)
         if row is None:
+            return
+        if row["kind"] == "bool":
+            self.action_cmd(f"set {name} {'off' if row['value'] else 'on'}")
             return
         if row["choices"]:
             nxt = row["choices"][(row["choices"].index(row["value"]) + 1) % len(row["choices"])]

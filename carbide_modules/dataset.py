@@ -70,12 +70,35 @@ def load_dataset(filepath=None):
         return True
 
 
+holdout_start = None  # set by set_holdout(): training batches never touch data[holdout_start:]
+
+
+def set_holdout(fraction=0.05):
+    """Reserve the last `fraction` of the data for measuring (not training), so a held-out loss
+    means something. Automatic model growth uses this as its gate."""
+    global holdout_start
+    holdout_start = int(len(data) * (1.0 - fraction)) if data is not None and fraction else None
+    return holdout_start
+
+
 def get_batch(batch=None, seq_len=None):
     if batch is None:
         batch = config.batch_size
     if seq_len is None:
         seq_len = config.seq_len
-    ix = torch.randint(0, len(data) - seq_len - 1, (batch,))
+    hi = holdout_start if holdout_start is not None else len(data)
+    ix = torch.randint(0, hi - seq_len - 1, (batch,))
     xs = torch.stack([data[i : i + seq_len] for i in ix])
     ys = torch.stack([data[i + 1 : i + seq_len + 1] for i in ix])
     return xs, ys
+
+
+def get_holdout_batch(generator, batch=None, seq_len=None):
+    """A batch from the reserved tail (needs set_holdout first); `generator` makes it repeatable."""
+    if holdout_start is None:
+        raise RuntimeError("no held-out slice reserved -- call dataset.set_holdout() first")
+    batch = batch or config.batch_size
+    seq_len = seq_len or config.seq_len
+    ix = torch.randint(holdout_start, len(data) - seq_len - 1, (batch,), generator=generator)
+    return (torch.stack([data[i : i + seq_len] for i in ix]),
+            torch.stack([data[i + 1 : i + seq_len + 1] for i in ix]))

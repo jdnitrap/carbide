@@ -68,3 +68,17 @@ def test_graph_commands_dump_data_and_report_it():
     out = _session(["graph stats", "graph ingest law law.tsv triples", "graph stats", "graph report plaintiff"], d)
     assert "no graph database" in out and '"added": 1' in out
     assert "IN_DOMAIN" in out and "[law/import/accepted]" in out and '"modules": ["core", "law"]' in out
+
+
+def test_auto_grow_is_off_by_default_and_grows_when_asked_and_it_helps():
+    d = tempfile.mkdtemp()
+    out = _session(_small() + ["set train.auto_grow", "set train.auto_grow maybe", "set train.max_layers 3"], d)
+    assert "train.auto_grow = off" in out and "takes on/off" in out
+    grown = _session(_small() + ["set train.auto_grow on", "set train.growth_min_gain 1", "set train.max_layers 2",
+                                 "train 450", "status"], d)
+    assert "n_layers=2" in grown, grown[-400:]
+    log = [json.loads(line) for line in open(os.path.join(d, "growth_log.jsonl"))]
+    assert log and log[0]["kept"] and log[0]["layers_before"] == 1 and log[0]["layers_after"] == 2
+    assert log[0]["heldout_after"] < log[0]["heldout_before"]
+    again = _session(["status"], d)                              # a new process: the deeper model carries over
+    assert "n_layers=2" in again and "step=450" in again

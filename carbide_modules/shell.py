@@ -23,9 +23,10 @@ HELP_TEXT = """help
 status                       one-line summary (model, training, data, graph)
 train [n=100]                train n steps (checkpoint is saved when the run ends)
 reset                        forget the current model and training progress
-generate <prompt...>         generate text with the gen.* settings (\\n in a prompt = newline; alias: gen)
+generate [+facts] <prompt...> generate text with the gen.* settings (+facts puts the graph's facts in front; \\n = newline; alias: gen)
 preset <calm|balanced|wild>  set all the sampling controls at once
 set [name [value]]           list / show / change any knob (`set json` = the raw table)
+teacher <model> <genre> <n> <out> [topics...] --license-ok   a local Ollama model writes training text; the graph filters it
 save [suffix]                save a checkpoint          load [suffix] [migrate]   load one
 checkpoints                  list saved checkpoints
 data <path>                  load a training text file
@@ -33,6 +34,8 @@ graph stats                  what the graph memory holds
 graph build-core [corpus]    build the dictionary module from a corpus + WordNet (needs nltk)
 graph ingest <module> <file> <triples|glossary|text>   dump domain data into a module
 graph import-dimensions [file]   move discovered_dimensions.json into the graph
+graph facts <words...>        the graph's facts about words, as sentences
+graph fact-corpus <in> <out> write a training corpus with facts in front of each sentence
 graph teach [corpus]         Carbide teaches the graph (probe on its hidden states; gated, automatic)
 graph refresh                re-read the graph into the live graph model
 graph report <word>          everything the graph knows about a word
@@ -139,6 +142,36 @@ def _graph(args):
             print("teach:", json.dumps(teach.probe_and_propose(st, vectors)))
         finally:
             st.close()
+    elif sub == "facts":
+        from .graphmem import retrieval
+        if len(args) < 2:
+            print("usage: graph facts <words...>")
+            return
+        st = _store()
+        if st is None:
+            print("no graph database yet")
+            return
+        try:
+            facts = retrieval.retrieve(st, " ".join(args[1:]), max_words=4, per_word=3)
+        finally:
+            st.close()
+        print("\n".join(facts) or "(no facts)")
+    elif sub == "fact-corpus":
+        from .graphmem import retrieval
+        if len(args) != 3 or not os.path.exists(args[1]):
+            print("usage: graph fact-corpus <input.txt> <output.txt>")
+            return
+        with open(args[1], encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        st = _store()
+        if st is None:
+            print("no graph database yet")
+            return
+        try:
+            total, withf = retrieval.build_fact_corpus(st, text, args[2])
+        finally:
+            st.close()
+        print(f"wrote {args[2]}: {total} sentences, {withf} with facts (train on it: data {args[2]})")
     elif sub == "refresh":
         training.refresh_graph_table()
         print("graph table refreshed into the live model")
@@ -161,7 +194,7 @@ def _graph(args):
             print(f"  {e['rel']:<10} {e['dst']:<20} w={e['weight']:.2f} conf={e['confidence']:.2f} "
                   f"[{e['module']}/{e['source']}/{e['status']}]")
     else:
-        print("graph: stats | build-core | ingest | import-dimensions | teach | refresh | report")
+        print("graph: stats | build-core | ingest | import-dimensions | teach | facts | fact-corpus | refresh | report")
 
 
 def _dispatch(cmd, args):
@@ -189,7 +222,12 @@ def _dispatch(cmd, args):
             print("no dataset loaded -- use: data <path>")
             return
         STOP.clear()
-        training.train_n_steps(n, should_stop=STOP.is_set)
+        if getattr(config, "train_auto_grow", False):
+            from . import growth
+            growth.train_with_growth(n, should_stop=STOP.is_set, max_layers=getattr(config, "train_max_layers", 8),
+                                     min_gain=getattr(config, "train_growth_min_gain", 0.01))
+        else:
+            training.train_n_steps(n, should_stop=STOP.is_set)
     elif cmd == "reset":
         train_state.reset()
         training.model = training.opt = None
@@ -198,9 +236,22 @@ def _dispatch(cmd, args):
         if training.model is None:
             print("[Model not trained yet] -- `train` or `load` first")
             return
-        prompt = " ".join(args).replace("\\n", "\n") or "the "
-        text = generation.generate(prompt, n_bytes=getattr(config, "gen_length", 200), **_gen_kwargs())
-        print(text)
+        use_facts = bool(args) and args[0] == "+facts"
+        prompt = " ".join(args[1:] if use_facts else args).replace("\\n", "\n") or "the "
+        prefix = ""
+        if use_facts:
+            from .graphmem import retrieval
+            st = _store()
+            if st is None:
+                print("(no graph database yet, generating without facts)")
+            else:
+                try:
+                    prefix = retrieval.prefix_for(st, prompt)
+                finally:
+                    st.close()
+                print(prefix.strip() or "(the graph has no facts about these words)")
+        text = generation.generate(prefix + prompt, n_bytes=getattr(config, "gen_length", 200), **_gen_kwargs())
+        print(text[len(prefix):] if prefix else text)
     elif cmd == "preset":
         if len(args) != 1 or args[0] not in generation.PRESETS:
             print(f"usage: preset <{'|'.join(sorted(generation.PRESETS))}>")
@@ -227,6 +278,25 @@ def _dispatch(cmd, args):
         print("loaded" if dataset.load_dataset(" ".join(args)) else "not loaded")
     elif cmd == "graph":
         _graph(args)
+    elif cmd == "teacher":
+        from . import teacher
+        ok = "--license-ok" in args
+        args = [a for a in args if a != "--license-ok"]
+        if len(args) < 4 or args[1] not in teacher.GENRES or not args[2].isdigit():
+            print(f"usage: teacher <model> <{'|'.join(teacher.GENRES)}> <count> <out.txt> [topics...] --license-ok")
+            return
+        STOP.clear()
+        st = _store()
+        try:
+            stats = teacher.run(args[0], args[1], int(args[2]), args[3], license_ok=ok, topics=args[4:],
+                                store=st, should_stop=STOP.is_set)
+        except teacher.TeacherError as e:
+            print(f"teacher: {e}")
+            return
+        finally:
+            if st is not None:
+                st.close()
+        print(f"teacher: {json.dumps(stats)} -> {args[3]} (manifest: {args[3]}.manifest.jsonl); train on it with: data {args[3]}")
     else:
         print(f"unknown command {cmd!r} -- try: help")
 
