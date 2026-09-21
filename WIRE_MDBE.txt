@@ -1,0 +1,12 @@
+Carbide now lives in carbide_modules/layers.py together with LayerStack.
+
+Import:
+    from carbide_modules.layers import Carbide, LayerStack, strips
+
+mdbe.py still owns the 6 hex flags, grammar columns, SelectiveSSM, and MDBE.base/proj.
+LayerStack + Block + Carbide sit in layers.py so the three named tables
+feed the mixer and the SSM sees only numbers.
+
+Training / CLI should switch their Carbide import to layers when you next
+edit those files:
+    from .layers import Carbide

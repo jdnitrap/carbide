@@ -1,8 +1,7 @@
 import torch
 from carbide_modules.layers import (
-    NUM_SENTENCE_DIMS, STRIP_WIDTH, strips, word_id_for,
+    NUM_SENTENCE_DIMS, STRIP_WIDTH, strips, word_id_for, Carbide,
 )
-from carbide_modules.mdbe import Carbide
 
 
 def test_strips_shapes():
@@ -28,3 +27,12 @@ def test_carbide_modes_run():
 def test_known_word_or_unk():
     assert isinstance(word_id_for("the"), int)
     assert word_id_for("the") >= 0
+
+
+def test_layerstack_on_model():
+    m = Carbide(d_model=32, n_layers=1, d_state=8)
+    assert hasattr(m, "layers")
+    x = torch.tensor([[ord(c) for c in "Hi."]])
+    m(x, mode="full")
+    assert m.last_strips is not None
+    assert m.blocks[0].constraint_proj.in_features == STRIP_WIDTH
