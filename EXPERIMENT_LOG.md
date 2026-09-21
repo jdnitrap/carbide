@@ -305,3 +305,74 @@ Ollama model writes text, the graph and cheap checks filter it, a manifest recor
 to run until the licence is acknowledged. Bugs found by testing these: saving a checkpoint after a growth
 made it impossible to reload (the optimizer had a second parameter group), and `teacher.run` crashed when no
 topics were given.
+
+## 2026-09-21 — Graph features on the word-free `beside` layout help; the soft-grammar cost closes with training
+
+Two arms of a new word-free layout built inside `LayerStack` (`beside_layered`: byte + six flags + grammar, no word
+row, no sentence pack; `beside_graph`: the same plus the compiled graph features through the causal word ids), so
+adding the graph is a one-variable change. Same setup as the entries above (d_model=128, 2 layers, seq_len=128, batch
+16, lr 3e-3, 500 steps, seeds 0/1/2, identical batches and initialisation), soft grammar (the default). Held-out loss:
+
+| arm | params* | last-50 train | held-out | seed 0 | seed 1 | seed 2 |
+|---|---|---|---|---|---|---|
+| beside (old `mdbe.Carbide`) | 163,136 | 1.7792 | 1.7481 | 1.7485 | 1.7521 | 1.7437 |
+| beside_layered (no graph) | 471,744 | 1.7757 | 1.7381 | 1.7451 | 1.7349 | 1.7342 |
+| beside_graph (+ graph) | 513,216 | 1.7648 | **1.7303** | 1.7365 | 1.7282 | 1.7261 |
+
+*Both new arms carry an unused Layer-2 word table (about 262k parameters); their real size is roughly 210k.
+
+- `beside_graph` vs `beside_layered` (the graph's own effect): -0.0085, -0.0067, -0.0081, mean **-0.0078**, better on 3 of 3.
+- `beside_layered` vs the old `beside` (the layout, not the graph): mean -0.0100 (better on 3 of 3).
+- Together `beside_graph` is 0.0178 better than the old soft `beside`, and 0.0013 better than the old hard-grammar
+  `beside` (1.7316). No hard-grammar `beside_graph` run exists, so that last comparison mixes two things.
+
+**Soft vs hard grammar at 2,000 steps** (`beside`, same setup, 2 seeds, `ablate_layers.py --hard` for hard):
+
+| grammar | held-out | train last-50 | seed 0 | seed 1 |
+|---|---|---|---|---|
+| hard 0/1 | 1.5489 | 1.5754 | 1.5527 | 1.5451 |
+| soft | 1.5488 | 1.5826 | 1.5503 | 1.5473 |
+
+Soft minus hard: -0.0024 and +0.0022 (mean -0.0001): a tie. At 500 steps soft was worse on every seed (mean +0.0165),
+so that cost was a short-training effect and soft stays the default. Two seeds only.
+
+For scale: going from 500 to 2,000 steps improved the held-out loss by about 0.18 (hard) and 0.20 (soft), more than
+ten times any structural effect measured in this log (0.008 to 0.02). More training moves the loss far more than
+any of the layers, graph features or grammar settings; those effects are real and repeatable but small.
+Untested: `beside_graph` with hard grammar, longer than 2,000 steps, more seeds, and any baseline without the
+hand-defined columns at all (plain embedding) or a small GRU/transformer of equal size.
+
+## 2026-09-21 — Does Carbide learn to use graph facts placed in front of a sentence? Not at this scale
+
+`experiment_facts.py`: two identical small models (d_model=96, 2 layers, seq_len=384, batch 6, 1,200 steps, seed 0) on the
+same 1.2 MB of text, one on the raw sentences (`plain`), one on the retrieval format ("Facts: <the graph's definition
+and relations for the sentence's most informative word>\n<sentence>", 8,474 of 8,478 training sentences carried facts,
+prefixes capped at 160 characters). Scored on the bytes of 300 held-out sentences (from the end of the corpus, never
+trained on), the prefix used as context only:
+
+| condition | held-out loss on the sentence |
+|---|---|
+| plain model, no facts | 1.7604 |
+| facts model, no facts | 1.8264 |
+| facts model, SHUFFLED facts (another sentence's) | 1.8247 |
+| facts model, CORRECT facts | 1.8251 |
+
+- correct - shuffled = +0.0004: **the model does not use the retrieved facts.** Had it learned to, correct facts would beat
+  shuffled ones; the shuffled condition controls for it merely being used to a `Facts:` line.
+- correct - plain = +0.0647: the fact-trained model is worse at the sentences themselves, having spent capacity on the
+  format (its training loss included the prefix bytes).
+- One seed, one small model, 1,200 steps, 300 sentences; the facts are dictionary definitions that only partly restate
+  the sentence. This does not show it can never work, only that it does not appear at this size and training length.
+  Untested: longer training, a larger model, facts that directly contain the answer (e.g. domain triples), and a
+  copy-style task where using the facts is unambiguously useful.
+
+A first run of this experiment returned NaN for both fact conditions and is not a result: with a 256-byte window, 22% of
+sentences had a prefix + sentence longer than the window (prefixes reach 316 characters), so some sentences had nothing to
+score and one empty score poisoned the average; the fact-trained model also often saw its sentences cut off. Fixed
+(384-byte window, prefix cap, skip-and-count, and the script now raises rather than return NaN) and re-run; the flawed
+run's files were kept as `*.FLAWED.json` outside the repo.
+
+Consequence for the rest of the plan: the retrieval tooling (`graph facts`, `generate +facts`, `graph fact-corpus`) works
+and is tested, but training Carbide on that format has not been shown to help, so it should not be presented as a way to
+make Carbide "know" the graph's facts yet. The compiled graph FEATURES (see the entry above) do help a little; the
+fact-sentence route did not.

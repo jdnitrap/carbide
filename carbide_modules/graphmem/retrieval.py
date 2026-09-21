@@ -8,9 +8,11 @@ anything dumped into an enabled domain module), and verbalize them as short sent
     Facts: aspirin treats pain. pain: an unpleasant feeling. ...
     <prompt>
 
-Two honest limits. Carbide only benefits if it is TRAINED on text in this format
-(build_fact_corpus writes such a corpus from any text), and a small byte model will still paraphrase
-poorly -- this gives it the facts, not the reasoning.
+Two honest limits. Carbide only has a chance of benefiting if it is TRAINED on text in this format
+(build_fact_corpus writes such a corpus from any text) -- and a first measurement (experiment_facts.py,
+EXPERIMENT_LOG.md) found that a small model trained that way did NOT learn to use the facts: correct facts
+scored the same as another sentence's. This gives a model the facts, not the reasoning, and at this
+scale it has not been shown to help.
 """
 import re
 

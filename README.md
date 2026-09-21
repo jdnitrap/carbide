@@ -122,7 +122,9 @@ python -m carbide_modules.graphmem import-dimensions          # keep discovered 
   training never sees) improves; otherwise it rolls back exactly. Every attempt is in `growth_log.jsonl`.
 - **Facts in front of the prompt.** `graph facts <words>` and `generate +facts <prompt>` put the graph's
   definitions and domain facts, as plain sentences, before the prompt; `graph fact-corpus in.txt out.txt`
-  writes a training text in that format. Carbide only benefits once it is trained on that format.
+  writes a training text in that format. A first test at small scale (1,200 steps, 96-wide) showed Carbide did
+  **not** learn to use the facts (correct facts scored the same as another sentence's); see the newest entry in
+  [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). The compiled graph features, by contrast, do help a little.
 - **A local model as teacher.** `teacher <model> <genre> <count> <out.txt> --license-ok` has an Ollama model
   write text, filters it with the graph (ASCII, not repetitive, mostly known words), and records every
   attempt in a manifest. It refuses to run until you say you have checked the model's licence. Generation is
