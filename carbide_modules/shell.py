@@ -22,6 +22,7 @@ NOTES = []                 # startup notices, shown once by `set`
 HELP_TEXT = """help
 status                       one-line summary (model, training, data, graph)
 train [n=100]                train n steps (checkpoint is saved when the run ends)
+grow words [rows]            add word-table rows (also automatic when headroom runs low)
 reset                        forget the current model and training progress
 generate [+facts] <prompt...> generate text with the gen.* settings (+facts puts the graph's facts in front; \\n = newline; alias: gen)
 preset <calm|balanced|wild>  set all the sampling controls at once
@@ -60,7 +61,7 @@ def status_line():
         "seq_len": config.seq_len, "batch": config.batch_size, "lr": f"{config.learning_rate:g}",
         "data": (os.path.basename(config.data_file) if config.data_file else "default").replace(" ", "_"),
         "bytes": len(dataset.data) if dataset.data is not None else 0,
-        "vocab": len(layers.word_vocab()[0]),
+        "vocab": len(layers.word_vocab()[0]), "word_rows": layers.WORD_ROWS,
         "graph": "off", "nodes": 0, "edges": 0, "modules": 0, "capacity": 0, "dims": 0,
     }
     st = _store()
@@ -276,6 +277,13 @@ def _dispatch(cmd, args):
             print("usage: data <path>")
             return
         print("loaded" if dataset.load_dataset(" ".join(args)) else "not loaded")
+    elif cmd == "grow":
+        if not args or args[0] != "words":
+            print("usage: grow words [rows]   (depth grows automatically: set train.auto_grow on)")
+            return
+        from . import layers
+        rows = int(args[1]) if len(args) > 1 else layers.WORD_ROWS + training.WORD_ROW_BLOCK
+        print(f"word table: {layers.WORD_ROWS} -> {rows} rows" if training.grow_word_table(rows) else "already that big")
     elif cmd == "graph":
         _graph(args)
     elif cmd == "teacher":

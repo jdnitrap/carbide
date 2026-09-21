@@ -1,6 +1,6 @@
 """Layer ablation for the three-layer MDBE stack. Same batches, seeds and init for every arm.
 
-  python3 ablate_layers.py --arm {beside,l1,l1_l2,l1_l2_l3,l1_l2_graph,l1_graph} --seed 0 --steps 500 --d_model 128
+  python3 ablate_layers.py --arm {beside,l1,l1_l2,l1_l2_l3,l1_l2_graph,l1_graph,beside_layered,beside_graph} --seed 0 --steps 500 --d_model 128
   (run from the repo root; --repo points it at another checkout, e.g. an older commit)
 
 `beside` = the old mdbe.Carbide in mode "full" (six flags + grammar beside them, no word/sentence
@@ -23,6 +23,7 @@ ap.add_argument("--threads", type=int, default=3); ap.add_argument("--vocab", de
 ap.add_argument("--out", default=None); ap.add_argument("--save", default=None)
 ap.add_argument("--load", default=None, help="skip training; evaluate this saved layers.Carbide state_dict")
 ap.add_argument("--tag", default="")
+ap.add_argument("--hard", action="store_true", help="hard 0/1 grammar values (mdbe.SOFT_GRAMMAR = False)")
 ap.add_argument("--graphdb", default="graph_memory.db", help="graph memory used by the graph arms (l1_l2_graph, l1_graph)")
 a = ap.parse_args()
 
@@ -32,6 +33,8 @@ from carbide_modules import layers as L
 from carbide_modules.mdbe import Carbide as OldCarbide
 if a.vocab:
     L.WORD_VOCAB_PATH = a.vocab
+if a.hard:
+    from carbide_modules import mdbe as _mdbe; _mdbe.SOFT_GRAMMAR = False
 L._VOCAB_WORDS = None; L._WORD_TO_ID = None
 if not os.path.exists(L.WORD_VOCAB_PATH):
     L.build_word_vocab("carbide_training_dataset.txt")
@@ -65,7 +68,7 @@ def held_out(model):
           for x, y in batches(train_end, len(data), g, 20)]
     model.train(); return sum(ls) / len(ls)
 
-res = {"arm": a.arm, "seed": a.seed, "steps": a.steps, "d_model": a.d_model, "n_layers": a.n_layers,
+res = {"arm": a.arm + ("_hard" if a.hard else ""), "seed": a.seed, "steps": a.steps, "d_model": a.d_model, "n_layers": a.n_layers,
        "seq_len": a.seq_len, "batch": a.batch, "lr": a.lr, "repo": os.path.basename(a.repo), "tag": a.tag}
 model = make_model()
 res["params"] = sum(p.numel() for p in model.parameters())

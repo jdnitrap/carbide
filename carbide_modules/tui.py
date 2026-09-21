@@ -30,7 +30,7 @@ from textual.suggester import Suggester
 from textual.widgets import DataTable, Footer, Header, Input, RichLog, Static
 
 POLLS = ("status", "set json")   # "set json" must stay last: its arrival triggers the panel redraw
-COMMANDS = ("help", "status", "train", "reset", "generate", "preset", "set", "save", "load", "checkpoints",
+COMMANDS = ("help", "status", "train", "grow", "reset", "generate", "preset", "set", "save", "load", "checkpoints",
             "data", "graph", "teacher", "quit")
 GRAPH_SUBS = ("stats", "build-core", "ingest", "import-dimensions", "teach", "facts", "fact-corpus", "refresh", "report")
 PRESETS = ("calm", "balanced", "wild")

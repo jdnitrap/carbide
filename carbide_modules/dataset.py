@@ -15,7 +15,10 @@ def _build_layer2_vocab(path):
     path needs this: without it every word is UNK and Layer 2 is one row. A
     failure is reported, not swallowed."""
     try:
+        from . import training
         from .layers import build_word_vocab
+        if training.ensure_word_capacity():           # room for this dataset's new words
+            print("\u2713 Word table grown to make room for new words")
         n = len(build_word_vocab(path))
         print(f"\u2713 Layer-2 word vocab {n} entries")
     except Exception as e:

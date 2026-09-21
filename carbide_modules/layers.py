@@ -22,7 +22,16 @@ from .mdbe import (
     mdbe_constraints,
 )
 
-WORD_VOCAB_SIZE = 2048
+WORD_VOCAB_SIZE = 2048   # the DEFAULT number of word rows; the live value is WORD_ROWS (it can grow)
+WORD_ROWS = WORD_VOCAB_SIZE
+
+
+def set_word_rows(n):
+    """Make n the number of Layer-2 word rows (row 0 = UNK, so n-1 words). It only ever grows a
+    table; a checkpoint records its own value and restores it on load."""
+    global WORD_ROWS
+    WORD_ROWS = int(n)
+    _reset_vocab_cache()
 UNK_ID = 0
 WORD_VOCAB_PATH = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "word_vocab.json"))
@@ -62,7 +71,7 @@ def _write_vocab_file(words):
         json.dump({"words": list(words)}, f)
 
 
-def build_word_vocab(corpus_path=None, max_size=WORD_VOCAB_SIZE - 1):
+def build_word_vocab(corpus_path=None, max_size=None):
     """Lowercase word list; word i is Layer-2 row i+1 (row 0 = UNK). Persists
     word_vocab.json.
 
@@ -72,6 +81,7 @@ def build_word_vocab(corpus_path=None, max_size=WORD_VOCAB_SIZE - 1):
     WORD_VOCAB_HEADROOM short of the table size, so later datasets have room; once
     the table is full, further words map to UNK (a known limit until the table is
     grown -- see LayerStack)."""
+    max_size = WORD_ROWS - 1 if max_size is None else max_size
     words = _read_vocab_file()[:max_size]
     if corpus_path and os.path.exists(corpus_path):
         limit = max_size if words else max_size - WORD_VOCAB_HEADROOM
@@ -126,7 +136,7 @@ def word_vocab():
         if not words:
             return [], {}
         _VOCAB_WORDS = words
-        _WORD_TO_ID = {w: i + 1 for i, w in enumerate(_VOCAB_WORDS[:WORD_VOCAB_SIZE - 1])}
+        _WORD_TO_ID = {w: i + 1 for i, w in enumerate(_VOCAB_WORDS[:WORD_ROWS - 1])}
     return _VOCAB_WORDS, _WORD_TO_ID
 
 
@@ -289,22 +299,37 @@ def strips(bytes_seq, history=None, stream=None):
 class LayerStack(nn.Module):
     """Ingest L1 values + L2 word row + L3 packed slot into d_model."""
 
-    def __init__(self, d_model, graph_cols=0):
+    def __init__(self, d_model, graph_cols=0, word_rows=None):
         super().__init__()
         self.d_model = d_model
         self.graph_cols = graph_cols
+        rows = word_rows or WORD_ROWS
         if graph_cols:
             # the compiled graph table (graphmem.compile): one row per Layer-2 word id. A buffer,
             # so a checkpoint carries the exact table the model was trained against.
             self.graph_proj = nn.Linear(graph_cols, d_model, bias=False)
-            self.register_buffer("graph_table", torch.zeros(WORD_VOCAB_SIZE, graph_cols))
+            self.register_buffer("graph_table", torch.zeros(rows, graph_cols))
         self.byte = nn.Embedding(256, d_model)
-        self.word = nn.Embedding(WORD_VOCAB_SIZE, d_model)
+        self.word = nn.Embedding(rows, d_model)
         self.l1_proj = nn.Linear(NUM_CONSTRAINTS, d_model, bias=False)
         self.l2_proj = nn.Linear(NUM_LANGUAGE_MECHANICS, d_model, bias=False)
         self.l3_proj = nn.Linear(NUM_SENTENCE_DIMS, d_model, bias=False)
         self.pack_proj = nn.Linear(d_model, d_model, bias=False)
         self.mix = nn.Linear(d_model, d_model)
+
+    def grow_words(self, new_rows):
+        """More Layer-2 word rows. Every existing row (and graph-table row) is kept exactly, so nothing
+        already learned changes and words that were already known are unaffected."""
+        from .graphmem.compile import grow_embedding
+        old = self.word.num_embeddings
+        if new_rows <= old:
+            return False
+        self.word = grow_embedding(self.word, new_rows)
+        if self.graph_cols:
+            pad = torch.zeros(new_rows - old, self.graph_cols, dtype=self.graph_table.dtype)
+            self.graph_table = torch.cat([self.graph_table, pad])   # new words start with no graph features
+        set_word_rows(new_rows)
+        return True
 
     def forward(self, bytes_seq, history=None, mode="full", pack_state=None, stream=None):
         s = strips(bytes_seq, history=history, stream=stream)
@@ -316,8 +341,16 @@ class LayerStack(nn.Module):
         if graph_mode and not self.graph_cols:
             raise ValueError(f"mode {mode!r} needs a model built with graph_cols (model kind 'graph')")
         l1 = self.byte(bytes_seq)
-        if mode in ("full", "l1", "l1_l2", "l1_l2_l3", "flags_only") or graph_mode:
+        if mode in ("full", "l1", "l1_l2", "l1_l2_l3", "flags_only") or graph_mode or mode in BESIDE_MODES:
             l1 = l1 + self.l1_proj(flags)
+        if mode in BESIDE_MODES:
+            x = l1 + self.l2_proj(grammar)
+            if mode == "beside_graph":
+                gfeat = self.graph_table[word_ids]
+                s["graph"] = gfeat
+                x = x + self.graph_proj(gfeat)
+            s["pack_state"] = pack_state
+            return self.mix(x), s
         l2 = self.word(word_ids)
         if mode in ("full", "l1_l2", "l1_l2_l3", "l1_l2_graph"):
             l2 = l2 + self.l2_proj(grammar)
@@ -417,8 +450,11 @@ def export_sentence_table(model, filepath, sample_text="The cat sat. Did it run?
         csv.writer(fh).writerows(rows)
 
 
-GRAPH_MODES = ("l1_l2_graph", "l1_graph")   # l1_graph: the graph REPLACES the rule-based grammar columns
-MODES = ("full", "l1_l2_l3", "l1_l2", "l1", "flags_only", "no_constraints", "plain_embedding") + GRAPH_MODES
+GRAPH_MODES = ("l1_l2_graph", "l1_graph", "beside_graph")   # l1_graph: the graph REPLACES the rule grammar columns
+# beside_*: the word-free layout of the old `beside` model (byte + flags + grammar, no word row, no
+# sentence pack) built inside LayerStack, so adding the graph to it is a clean one-variable test.
+BESIDE_MODES = ("beside_layered", "beside_graph")
+MODES = ("full", "l1_l2_l3", "l1_l2", "l1", "flags_only", "no_constraints", "plain_embedding") + GRAPH_MODES + ("beside_layered",)
 
 
 class Block(nn.Module):
@@ -448,11 +484,11 @@ class Block(nn.Module):
 class Carbide(nn.Module):
     """Selective SSM with the three-layer MDBE stack on the front."""
 
-    def __init__(self, d_model=64, n_layers=2, d_state=16, graph_cols=0, default_mode="full"):
+    def __init__(self, d_model=64, n_layers=2, d_state=16, graph_cols=0, default_mode="full", word_rows=None):
         super().__init__()
         from .mdbe import MDBE, LocalByteConv
         self.mdbe = MDBE(d_model)
-        self.layers = LayerStack(d_model, graph_cols=graph_cols)
+        self.layers = LayerStack(d_model, graph_cols=graph_cols, word_rows=word_rows)
         self.mdbe.base = self.layers.byte
         self.local_conv = LocalByteConv(d_model)
         self.blocks = nn.ModuleList([Block(d_model, d_state=d_state, extra_cols=graph_cols)
@@ -461,6 +497,9 @@ class Carbide(nn.Module):
         self.head = nn.Linear(d_model, 256)
         self.last_strips = None
         self.default_mode = default_mode  # what model(x) uses; the graph kind defaults to a graph mode
+
+    def grow_word_table(self, new_rows):
+        return self.layers.grow_words(new_rows)
 
     def set_graph_table(self, table):
         """Install a compiled graph table (rows <= the word table). Refreshing it changes what
@@ -480,7 +519,7 @@ class Carbide(nn.Module):
         if mode in ("flags_only", "l1", "l1_graph"):
             cols = cols.clone()
             cols[..., NUM_CONSTRAINTS:] = 0
-        elif mode in ("l1_l2", "l1_l2_graph"):
+        elif mode in ("l1_l2", "l1_l2_graph", "beside_layered", "beside_graph"):
             cols = cols.clone()
             cols[..., -NUM_SENTENCE_DIMS:] = 0
         if "graph" in s:

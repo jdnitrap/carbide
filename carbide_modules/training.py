@@ -83,7 +83,8 @@ def compile_graph_table():
     """Compile the graph memory (config.graph_db) into the table the graph model reads,
     aligned to the current Layer-2 vocabulary."""
     from .graphmem import GraphStore, compile_for_vocab
-    from .layers import WORD_VOCAB_SIZE, word_vocab
+    from .layers import WORD_ROWS, word_vocab
+    rows = model.layers.word.num_embeddings if model is not None and hasattr(model, "layers") else WORD_ROWS
     if not os.path.exists(config.graph_db):
         raise RuntimeError(f"no graph database at {config.graph_db!r}. Build it first:\n"
                            f"  python -m carbide_modules.graphmem build-core --corpus <your corpus>")
@@ -91,7 +92,49 @@ def compile_graph_table():
     if not words:
         raise RuntimeError("the Layer-2 word vocabulary is empty; load a dataset first")
     with GraphStore(config.graph_db) as store:
-        return compile_for_vocab(store, words, WORD_VOCAB_SIZE).table
+        return compile_for_vocab(store, words, rows).table
+
+
+WORD_ROW_BLOCK = 1024   # rows added per word-table growth (the same block the graph grows capacity in)
+
+
+def grow_word_table(new_rows):
+    """Grow Carbide's Layer-2 word table (and its graph-table buffer) to `new_rows`, keeping every
+    existing row and the optimizer's momentum for the rows that exist. With no layered model built
+    yet it just raises the row count the next model will be built with."""
+    global opt
+    from . import layers
+    if model is None or not hasattr(model, "layers"):
+        layers.set_word_rows(max(new_rows, layers.WORD_ROWS))
+        return True
+    old_p = model.layers.word.weight
+    old_rows = old_p.shape[0]
+    if not model.grow_word_table(new_rows):
+        return False
+    if opt is not None:
+        fresh = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+        for p, state in opt.state.items():
+            if p is old_p:
+                state = {k: (torch.cat([v, v.new_zeros(new_rows - old_rows, *v.shape[1:])])
+                             if torch.is_tensor(v) and v.dim() >= 1 and v.shape[0] == old_rows else v)
+                         for k, v in state.items()}
+                fresh.state[model.layers.word.weight] = state
+            else:
+                fresh.state[p] = state
+        opt = fresh
+    return True
+
+
+def ensure_word_capacity(min_free=None):
+    """Automatic: keep room for words a future dataset will bring. If fewer than `min_free` rows
+    (default: the vocabulary headroom) are unused, grow the word table by one block."""
+    from . import layers
+    if not (model is not None and hasattr(model, "layers")) and config.model_kind not in ("layered", "graph"):
+        return False
+    free = layers.WORD_ROWS - 1 - len(layers._read_vocab_file())
+    if free >= (layers.WORD_VOCAB_HEADROOM if min_free is None else min_free):
+        return False
+    return grow_word_table(layers.WORD_ROWS + WORD_ROW_BLOCK)
 
 
 def refresh_graph_table():
@@ -132,8 +175,9 @@ def save_checkpoint(suffix=""):
     extra = {}
     if kind in ("layered", "graph"):
         from .layers import word_vocab
-        # the exact vocabulary this model's word rows were trained against
+        # the exact vocabulary this model's word rows were trained against, and how many rows it has
         extra['word_vocab'] = list(word_vocab()[0])
+        extra['word_rows'] = model.layers.word.num_embeddings
     from . import mdbe
     torch.save({
         'model_kind': kind,
@@ -192,6 +236,9 @@ def load_checkpoint(suffix="", allow_migrate=False):
     from . import mdbe
     # a checkpoint with no record predates soft scores: it was trained on hard 0/1 grammar values
     mdbe.SOFT_GRAMMAR = bool(ckpt.get('soft_grammar', False))
+    if kind in ("layered", "graph"):
+        from .layers import WORD_VOCAB_SIZE, set_word_rows
+        set_word_rows(ckpt.get('word_rows', WORD_VOCAB_SIZE))   # a grown table must be rebuilt at its own size
     model = _build_model(kind, with_table=False)   # the table itself is in the checkpoint's buffers
     if kind in ("layered", "graph") and 'word_vocab' in ckpt:
         from .layers import install_word_vocab
