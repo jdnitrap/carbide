@@ -4,6 +4,7 @@ Layer 1 rows = byte IDs. Layer 2 rows = words built from those bytes.
 Layer 3 is a packed sentence slot + sentence dimensions.
 Named strips are kept; values are ingested into the mixer / SSM.
 """
+import csv
 import json
 import os
 import re
@@ -240,7 +241,6 @@ class LayerStack(nn.Module):
             if pack_state is None:
                 packed = causal_pack(l2, sent_ids)
             else:
-                # Incremental decode: pack_state = [run, n, last_sid], B=1.
                 run, n, last_sid = pack_state
                 packed = torch.zeros_like(l2)
                 for t in range(l2.shape[1]):
@@ -274,3 +274,121 @@ def named_values(s, batch=0, pos=0):
     for i, name in enumerate(L3_NAMES):
         rows.append(("L3", name, float(s["l3"][batch, pos, i])))
     return rows
+
+
+def export_word_table(model, filepath, sample_text="the cat sat."):
+    """Dump Layer-2 word rows + grammar + pinned L3 tags for a sample."""
+    bt = torch.tensor([[ord(c) if ord(c) < 256 else 32 for c in sample_text]])
+    s = strips(bt)
+    seen = {}
+    rows = []
+    for t, w in enumerate(s["word_str"][0]):
+        if not w or w in seen:
+            continue
+        seen[w] = True
+        gram = s["grammar"][0, t].tolist()
+        l3 = s["l3"][0, t].tolist()
+        rows.append([w, int(s["word_ids"][0, t])]
+                    + [f"{v:.4f}" for v in gram]
+                    + [f"{v:.4f}" for v in l3])
+    header = ["word", "word_id"] + L2_GRAMMAR_NAMES + L3_NAMES
+    with open(filepath, "w", newline="", encoding="utf-8") as fh:
+        csv.writer(fh).writerow(header)
+        csv.writer(fh).writerows(rows)
+
+
+def export_sentence_table(model, filepath, sample_text="The cat sat. Did it run?"):
+    """Dump Layer-3 sentence dimensions for each sentence in a sample."""
+    bt = torch.tensor([[ord(c) if ord(c) < 256 else 32 for c in sample_text]])
+    s = strips(bt)
+    rows = []
+    last = None
+    acc = []
+    for t, ch in enumerate(sample_text):
+        sid = int(s["sent_ids"][0, t])
+        if last is None:
+            last = sid
+        if sid != last:
+            l3 = s["l3"][0, t - 1].tolist()
+            rows.append(["".join(acc).strip()] + [f"{v:.4f}" for v in l3])
+            acc = []
+            last = sid
+        acc.append(ch)
+    if acc:
+        l3 = s["l3"][0, -1].tolist()
+        rows.append(["".join(acc).strip()] + [f"{v:.4f}" for v in l3])
+    header = ["sentence"] + L3_NAMES
+    with open(filepath, "w", newline="", encoding="utf-8") as fh:
+        csv.writer(fh).writerow(header)
+        csv.writer(fh).writerows(rows)
+
+
+MODES = ("full", "l1_l2_l3", "l1_l2", "l1", "flags_only", "no_constraints", "plain_embedding")
+
+
+class Block(nn.Module):
+    """Re-inject named L1/L2/L3 strip values into each SSM block."""
+
+    def __init__(self, d_model, d_state=16):
+        super().__init__()
+        from .mdbe import SelectiveSSM
+        self.norm = nn.LayerNorm(d_model)
+        self.ssm = SelectiveSSM(d_model, d_state=d_state)
+        self.constraint_proj = nn.Linear(STRIP_WIDTH, d_model, bias=False)
+
+    def forward(self, x, constraint_cols):
+        if constraint_cols.shape[-1] != self.constraint_proj.in_features:
+            pad = self.constraint_proj.in_features - constraint_cols.shape[-1]
+            if pad > 0:
+                constraint_cols = torch.cat(
+                    [constraint_cols,
+                     constraint_cols.new_zeros(*constraint_cols.shape[:-1], pad)],
+                    dim=-1)
+            else:
+                constraint_cols = constraint_cols[..., :self.constraint_proj.in_features]
+        h = self.norm(x) + self.constraint_proj(constraint_cols)
+        return x + self.ssm(h)
+
+
+class Carbide(nn.Module):
+    """Selective SSM with the three-layer MDBE stack on the front."""
+
+    def __init__(self, d_model=64, n_layers=2, d_state=16):
+        super().__init__()
+        from .mdbe import MDBE, LocalByteConv
+        self.mdbe = MDBE(d_model)
+        self.layers = LayerStack(d_model)
+        self.mdbe.base = self.layers.byte
+        self.local_conv = LocalByteConv(d_model)
+        self.blocks = nn.ModuleList([Block(d_model, d_state=d_state) for _ in range(n_layers)])
+        self.head_norm = nn.LayerNorm(d_model)
+        self.head = nn.Linear(d_model, 256)
+        self.last_strips = None
+
+    def forward(self, bytes_seq, mode="full", history=None):
+        if mode == "plain_embedding":
+            x = self.layers.byte(bytes_seq)
+            constraint_cols = torch.zeros(
+                *bytes_seq.shape, STRIP_WIDTH, device=bytes_seq.device)
+            self.last_strips = None
+        elif mode == "no_constraints":
+            x = self.layers.mix(self.layers.byte(bytes_seq))
+            constraint_cols = torch.zeros(
+                *bytes_seq.shape, STRIP_WIDTH, device=bytes_seq.device)
+            self.last_strips = None
+        else:
+            use = "full" if mode in ("full", "l1_l2_l3") else mode
+            x, s = self.layers(bytes_seq, history=history, mode=use)
+            self.last_strips = s
+            constraint_cols = s["strip"]
+            if mode in ("flags_only", "l1"):
+                constraint_cols = constraint_cols.clone()
+                constraint_cols[..., NUM_CONSTRAINTS:] = 0
+            elif mode == "l1_l2":
+                constraint_cols = constraint_cols.clone()
+                constraint_cols[..., -NUM_SENTENCE_DIMS:] = 0
+
+        x = x + self.local_conv(x)
+        for block in self.blocks:
+            x = block(x, constraint_cols)
+        return self.head(self.head_norm(x))
