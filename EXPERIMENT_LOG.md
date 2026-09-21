@@ -268,3 +268,40 @@ with permanent slots. Bugs found by running things end to end: no checkpoint/sna
 fresh clone, the layered model crashing at its first weight-trace snapshot, the menu's learning-rate
 option never reaching the optimizer, and the graph store burning node ids (which inflated the word-table
 capacity about 20x).
+
+## 2026-09-21 — Soft grammar scores implemented; they cost a little loss at this scale
+
+`tests/test_soft_constraints.py` (commit a2f87a7) described soft grammar scores whose code was never
+committed. Implemented from the test and `MDBE_MANIFEST.md`: `CONF_CLOSED_POS` 0.95 (closed-class part
+of speech, auxiliaries), `CONF_PRONOUN` 0.90, `CONF_MORPH` 0.70 (0.85 for a listed irregular), `CONF_OPEN_POS`
+0.45, `CONF_GUESS` 0.40 (syntax/voice/mood/aspect), discovered clusters 0.20 (or their own stored
+confidence once fixed); each group's `:NONE` column holds `1 - confidence`; the six byte flags stay hard 0/1;
+`all_constraints(..., flags_only=True)` zeroes the grammar columns. All 9 soft-constraint tests pass, and a
+test pins every row of the documented table.
+
+Effect on the loss, same setup as the entries above (d_model=128, 2 layers, seq_len=128, 500 steps, seeds
+0/1/2, identical batches and initialisation), held-out loss:
+
+| arm | hard 0/1 (before) | soft (documented) | soft - hard per seed |
+|---|---|---|---|
+| beside | 1.7316 | 1.7481 | +0.0151, +0.0201, +0.0143 |
+| l1_l2 | 1.7531 | 1.7606 | +0.0072, +0.0087, +0.0064 |
+
+Soft was worse on all 6 paired comparisons (mean +0.0165 for `beside`, +0.0074 for `l1_l2`). One budget,
+one corpus, 3 seeds: it may close with longer training, and nothing was tuned (the confidence values are the
+documented ones). Because it is the documented design, soft is the default, but it is a switch
+(`set model.soft_grammar off`; `mdbe.SOFT_GRAMMAR`), each checkpoint records the mode it trained on and
+restores it on load, and a checkpoint with no record (trained before this) loads as hard.
+
+Also added: automatic depth growth (`growth.py`, off by default: `set train.auto_grow on`). A new block is
+a copy of the last with its SSM output zeroed, so the model's outputs are exactly unchanged when it is
+added; it is kept only if held-out loss (a reserved 5% tail that training never touches) improves by a
+margin after a short probation, otherwise weights, optimizer, layer count and step counter are restored
+exactly; every attempt is logged to `growth_log.jsonl`. Fact retrieval (`graph facts`, `generate +facts`,
+`graph fact-corpus`): the graph's definitions and relations verbalised as sentences in front of a prompt,
+which is the only way a text model can state graph knowledge; Carbide must be trained on that format to use
+it, and that has not been done. Teacher pipeline (`teacher <model> <genre> <n> <out> --license-ok`): a local
+Ollama model writes text, the graph and cheap checks filter it, a manifest records every attempt; it refuses
+to run until the licence is acknowledged. Bugs found by testing these: saving a checkpoint after a growth
+made it impossible to reload (the optimizer had a second parameter group), and `teacher.run` crashed when no
+topics were given.

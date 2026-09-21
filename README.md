@@ -38,6 +38,11 @@ Both stay tied to a named row and a named column, so both are still traceable. T
 
 The six Layer-1 facts stay hard yes/no. They decode the hex. They are not guesses.
 
+Grammar columns hold the rule's confidence (`the` is an article: 0.95; a suffix guess: 0.70; a
+discovered cluster: 0.20) and each group's `:NONE` column holds one minus that. This costs a little
+loss at the current scale (see the newest entry in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)), so it is a
+switch: `set model.soft_grammar off`. A checkpoint remembers which mode it was trained in.
+
 ## What this is not
 
 It is not ChatGPT. It is not a finished product that answers questions. It is a research program for studying a *labeled* way to read text, small enough to run and inspect at home.
@@ -110,6 +115,19 @@ python -m carbide_modules.graphmem import-dimensions          # keep discovered 
 - Whether the graph-fed model actually beats the plain one is measured, not assumed: see the newest
   entry in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
+## Growing over time
+
+- **Depth growth (`set train.auto_grow on`, off by default).** When loss plateaus, `train` adds one block
+  that starts as an exact no-op, trains briefly, and keeps it only if held-out loss (a reserved tail that
+  training never sees) improves; otherwise it rolls back exactly. Every attempt is in `growth_log.jsonl`.
+- **Facts in front of the prompt.** `graph facts <words>` and `generate +facts <prompt>` put the graph's
+  definitions and domain facts, as plain sentences, before the prompt; `graph fact-corpus in.txt out.txt`
+  writes a training text in that format. Carbide only benefits once it is trained on that format.
+- **A local model as teacher.** `teacher <model> <genre> <count> <out.txt> --license-ok` has an Ollama model
+  write text, filters it with the graph (ASCII, not repetitive, mostly known words), and records every
+  attempt in a manifest. It refuses to run until you say you have checked the model's licence. Generation is
+  slow on a CPU (about 8 seconds per 60-word passage with phi3).
+
 ## Project layout
 
 - `carbide_modules/` — the program
@@ -120,6 +138,7 @@ python -m carbide_modules.graphmem import-dimensions          # keep discovered 
   - `graphmem/` — the graph memory: `store.py` (rules it enforces), `wordnet_loader.py`, `ingest.py`, `compile.py`, `teach.py`
   - `shell.py`, `tui.py`, `settings.py` — command shell, terminal UI, and the one registry of knobs
   - `generation.py` — sampling controls and presets
+  - `growth.py`, `teacher.py` — gated depth growth; a local model as a teacher
 - `tests/` — checks that the reader and the notebooks still agree with themselves
 - `_archive/` and `carbide_module_cplusplus/` — older or side work, not the active program
 

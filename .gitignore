@@ -23,3 +23,5 @@ word_vocab.json.bak
 graph_memory.db
 graph_table.pt
 carbide_settings.json
+growth_log.jsonl
+*.manifest.jsonl
