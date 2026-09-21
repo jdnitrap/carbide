@@ -1,16 +1,32 @@
 """Soft grammar scores + hard byte flags + flags_only ablation mask."""
 import torch
 
+import inspect
+
+from carbide_modules import mdbe
 from carbide_modules.mdbe import (
     BYTE_IDENTITY_COLUMN_NAMES,
-    CONF_CLOSED_POS,
-    CONF_DISCOVERED,
     CONSTRAINT_COLUMN_NAMES,
     Carbide,
     NUM_CONSTRAINTS,
     all_constraints,
     mdbe_constraints,
 )
+
+# Commit a2f87a7 ("Soft grammar confidences ... flags_only ablation") added only THIS
+# test file; the mdbe.py code it describes (the CONF_* confidences and
+# all_constraints(..., flags_only=)) was never committed. Importing them by name made the
+# whole file fail at import and hid the tests that do pass. Resolve them here so each
+# dependent test fails on its own, saying what is missing.
+CONF_CLOSED_POS = getattr(mdbe, "CONF_CLOSED_POS", None)
+CONF_DISCOVERED = getattr(mdbe, "CONF_DISCOVERED", None)
+HAS_FLAGS_ONLY = "flags_only" in inspect.signature(all_constraints).parameters
+
+
+def _require_soft_confidences():
+    assert CONF_CLOSED_POS is not None and CONF_DISCOVERED is not None, (
+        "soft grammar confidences (CONF_CLOSED_POS / CONF_DISCOVERED) are not implemented in "
+        "carbide_modules/mdbe.py -- commit a2f87a7 added this test but not the code")
 
 
 def _bytes_of(s: str):
@@ -30,6 +46,7 @@ def test_six_flags_are_hard_bits():
 
 
 def test_article_is_soft_not_one():
+    _require_soft_confidences()
     x = _bytes_of(" the ")
     cols = all_constraints(x)[0]
     # last letter of 'the' is the byte before the trailing space
@@ -45,6 +62,7 @@ def test_article_is_soft_not_one():
 
 
 def test_discovered_cluster_is_weak():
+    _require_soft_confidences()
     # 'alice' is in DISCOVERED_PREPOSITION_LIKE in the committed json
     x = _bytes_of(" alice ")
     cols = all_constraints(x)[0]
@@ -60,6 +78,8 @@ def test_discovered_cluster_is_weak():
 
 
 def test_flags_only_zeroes_grammar_keeps_facts():
+    assert HAS_FLAGS_ONLY, ("all_constraints has no flags_only argument -- not implemented in "
+                            "carbide_modules/mdbe.py (see a2f87a7)")
     x = _bytes_of(" the 7")
     full = all_constraints(x)
     flags = all_constraints(x, flags_only=True)
