@@ -29,11 +29,58 @@ from . import training
 from .incremental import IncrementalState, incremental_step
 
 RESYNC_INTERVAL = 32  # bytes, only relevant once a generation exceeds seq_len
+REPEAT_WINDOW = 64    # the repetition penalty looks at this many recent bytes
+
+# (temperature, top_k, top_p, repetition_penalty, no_repeat_ngram). no_repeat_ngram is in BYTES:
+# it forbids any byte that would repeat a run of that many bytes already generated, which stops
+# phrase loops without stopping ordinary words from recurring (keep it well above word length).
+DEFAULTS = (0.8, 20, 1.0, 1.0, 0)   # the behaviour before these controls existed
+PRESETS = {
+    "calm":     (0.6, 20, 0.90, 1.05, 24),
+    "balanced": (0.8, 30, 0.95, 1.05, 16),
+    "wild":     (1.1, 60, 0.98, 1.12, 12),
+}
+
+
+def sample_byte(logits, out, temperature, top_k, top_p, repetition_penalty, no_repeat_ngram):
+    """Pick the next byte from `logits` given the bytes generated so far (`out`).
+    With the defaults this is exactly the original top-k + temperature sampling."""
+    logits = logits.clone()
+    if repetition_penalty != 1.0 and out:
+        for b in set(out[-REPEAT_WINDOW:]):
+            logits[b] = logits[b] / repetition_penalty if logits[b] > 0 else logits[b] * repetition_penalty
+    n = no_repeat_ngram
+    if n and len(out) >= n:
+        prefix = tuple(out[len(out) - (n - 1):]) if n > 1 else ()
+        for i in range(len(out) - n + 1):
+            if tuple(out[i:i + n - 1]) == prefix:
+                logits[out[i + n - 1]] = float("-inf")     # would complete a repeated n-gram
+    if temperature <= 0:
+        return int(logits.argmax())
+    adj = logits / temperature
+    if top_k and top_k < adj.numel():
+        kth = adj.topk(top_k).values[-1]
+        adj = adj.masked_fill(adj < kth, float("-inf"))
+    if top_p < 1.0:
+        probs, order = F.softmax(adj, -1).sort(descending=True)
+        drop = probs.cumsum(-1) - probs > top_p            # keep the smallest set reaching top_p
+        adj[order[drop]] = float("-inf")
+    return int(torch.multinomial(F.softmax(adj, -1), 1))
 
 
 @torch.no_grad()
-def generate(prompt="the ", n_bytes=100, temperature=0.8, top_k=20):
-    """Generate bytes from prompt."""
+def generate(prompt="the ", n_bytes=100, temperature=None, top_k=None, top_p=None,
+             repetition_penalty=None, no_repeat_ngram=None, seed=None, preset=None):
+    """Generate bytes from prompt. `preset` ("calm"/"balanced"/"wild") sets all five sampling
+    controls at once; any control passed explicitly overrides it. `seed` makes a run repeatable."""
+    if preset is not None and preset not in PRESETS:
+        raise ValueError(f"unknown preset {preset!r}; expected one of {sorted(PRESETS)}")
+    base = PRESETS[preset] if preset else DEFAULTS
+    given = (temperature, top_k, top_p, repetition_penalty, no_repeat_ngram)
+    temperature, top_k, top_p, repetition_penalty, no_repeat_ngram = (
+        b if g is None else g for g, b in zip(given, base))
+    if seed is not None:
+        torch.manual_seed(seed)
     if training.model is None:
         return "[Model not trained yet]"
 
@@ -50,10 +97,7 @@ def generate(prompt="the ", n_bytes=100, temperature=0.8, top_k=20):
     since_resync = 0
 
     for _ in range(n_bytes):
-        adj_logits = logits / temperature
-        kth = adj_logits.topk(top_k).values[-1]
-        probs = F.softmax(adj_logits.masked_fill(adj_logits < kth, float("-inf")), -1)
-        x = int(torch.multinomial(probs, 1))
+        x = sample_byte(logits, out, temperature, top_k, top_p, repetition_penalty, no_repeat_ngram)
         out.append(x)
         since_resync += 1
 
