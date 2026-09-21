@@ -232,12 +232,14 @@ class GraphStore:
 
     # -- nodes / edges ---------------------------------------------------------
     def add_node(self, text, kind="WORD", note=None):
-        self.db.execute("INSERT OR IGNORE INTO nodes(text, kind, note) VALUES (?,?,?)", (text, kind, note))
-        node_id, old_note = self.db.execute("SELECT id, note FROM nodes WHERE text = ? AND kind = ?",
-                                            (text, kind)).fetchone()
-        if note and old_note is None:
-            self.db.execute("UPDATE nodes SET note = ? WHERE id = ?", (note, node_id))
-        return node_id
+        # SELECT first: with AUTOINCREMENT, even an ignored INSERT OR IGNORE consumes an id,
+        # which made ids sparse and inflated the capacity the word table is sized from.
+        row = self.db.execute("SELECT id, note FROM nodes WHERE text = ? AND kind = ?", (text, kind)).fetchone()
+        if row:
+            if note and row[1] is None:
+                self.db.execute("UPDATE nodes SET note = ? WHERE id = ?", (note, row[0]))
+            return row[0]
+        return self.db.execute("INSERT INTO nodes(text, kind, note) VALUES (?,?,?)", (text, kind, note)).lastrowid
 
     def node_id(self, text, kind="WORD"):
         row = self.db.execute("SELECT id FROM nodes WHERE text = ? AND kind = ?", (text, kind)).fetchone()

@@ -135,7 +135,22 @@ def _persist(dimension_name: str, value_name: str, words, path, status="proposed
     discovered[key] = entry
     with open(path, "w") as f:
         json.dump(discovered, f, indent=2)
+    _record_in_graph(key, entry)
     return discovered[key]
+
+
+def _record_in_graph(key, entry):
+    """If a graph database exists, keep the dimension there too: permanent slot, provenance (which
+    run, when, how confident), and it survives restarts. Never breaks discovery itself."""
+    try:
+        from .config import config
+        if not os.path.exists(config.graph_db):
+            return
+        from .graphmem import GraphStore, ingest
+        with GraphStore(config.graph_db) as store:
+            ingest.record_dimension(store, key, entry)
+    except Exception as e:  # noqa: BLE001 -- the JSON file is still the source Carbide loads from
+        print(f"  ! could not record {key} in the graph ({type(e).__name__}: {e})")
 
 
 def load_discovered(path=DISCOVERED_PATH):
