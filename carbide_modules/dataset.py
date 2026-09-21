@@ -10,6 +10,18 @@ FALLBACK = ("the little cat saw the sun. the sun was big and warm. "
 data = None  # set by load_dataset() — call it once before get_batch()
 
 
+def _build_layer2_vocab(path):
+    """Build/persist the Layer-2 word vocabulary from the corpus. Every load
+    path needs this: without it every word is UNK and Layer 2 is one row. A
+    failure is reported, not swallowed."""
+    try:
+        from .layers import build_word_vocab
+        n = len(build_word_vocab(path))
+        print(f"\u2713 Layer-2 word vocab {n} entries")
+    except Exception as e:
+        print(f"  ! Layer-2 word vocab not built ({type(e).__name__}: {e}); all words will be UNK")
+
+
 def load_dataset(filepath=None):
     """Load dataset from file or use default (Option 2, 3, 4)."""
     global data
@@ -33,6 +45,7 @@ def load_dataset(filepath=None):
             config.data_file = filepath
             print(f"  \u2713 Loaded {filepath}")
             print(f"  \u2713 {len(text):,} chars, {len(data):,} bytes")
+            _build_layer2_vocab(filepath)
             return True
         except Exception as e:
             print(f"  \u2717 Error loading file: {e}")
@@ -53,13 +66,7 @@ def load_dataset(filepath=None):
 
         data = torch.tensor(list(text.encode("utf-8")), dtype=torch.long)
         print(f"\u2713 {len(data):,} bytes total\n")
-        try:
-            from .layers import build_word_vocab
-            path = config.data_file if config.data_file and os.path.exists(config.data_file) else None
-            n = len(build_word_vocab(path))
-            print(f"\u2713 Layer-2 word vocab {n} entries")
-        except Exception:
-            pass
+        _build_layer2_vocab(config.data_file if config.data_file and os.path.exists(config.data_file) else None)
         return True
 
 
