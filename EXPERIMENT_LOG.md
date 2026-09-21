@@ -160,3 +160,64 @@ those flags, (4) a word table ingested from those hex spans, (5) a
 fixed sentence slot with named sentence mechanics, and (6) a dumpable
 named strip that is never what the SSM is fed. Pieces are common.
 The whole recipe is Carbide’s as far as this check could see.
+
+## 2026-09-21 — Correction: the "Layer 1 + Layer 2 is the loss win" result was a lookahead leak
+
+**What was wrong.** `spans_from_bytes` in `layers.py` gave every letter of a
+word the id of the *whole* word. So at byte `t` of "the", Layer 2 already
+knew the word was "the" — the model was handed the answer it was being
+trained to predict. In modes `l1_l2` / `l1_l2_l3` / `full`, changing only
+*later* bytes changed the logits at *earlier* positions by about 1.0–1.5
+(modes `l1`, `flags_only`, `no_constraints` changed by 0). The 2026-09-18
+ablation below (beside 2.1338 / l1_l2 2.0425 / l1_l2_l3 2.0465) and the
+800-step health check were measured with that leak, so they do not support
+"Layer 1 + Layer 2 is the loss win". Two related faults: generation only has
+the partly spelled word, so training and generation disagreed; and the
+incremental decoder differed from a full forward pass by 0.2–0.9 on the
+layered model (`test_incremental_decode.py` builds the old `mdbe.Carbide`, so
+it never exercised the layer stack).
+
+**Fix.** A word is now known at the delimiter byte that completes it and is
+carried forward; letters of a word still being spelled see the previous
+completed word. Word/sentence ids and Layer 3's running maxima are computed by
+one streaming routine used by both the full forward pass and `incremental_step`.
+`tests/test_causality.py` checks prefix causality in every mode, and
+incremental == full past the 255-byte window; all of it fails on the old code.
+
+**Re-measured** with the same setup as the old ablation (d_model=128, 2 layers,
+seq_len=128, 500 steps, seeds 0/1/2; batch 16, lr 3e-3, d_state 16; identical
+batches and initialisation per seed for every arm; `ablate_layers.py`). Mean
+of the last-50-step training loss, with the per-seed spread:
+
+| arm | code | params | last-50 train loss (mean, sd) | held-out loss (mean) |
+|---|---|---|---|---|
+| beside (old `mdbe.Carbide`, mode full) | fixed | 163,136 | 1.7695 (0.007) | 1.7316 |
+| l1 (flags only) | fixed | 471,744 | 1.8114 (0.008) | 1.7721 |
+| l1_l2 | fixed | 471,744 | 1.7845 (0.004) | 1.7526 |
+| l1_l2_l3 | fixed | 471,744 | 1.7858 (0.002) | 1.7529 |
+| l1_l2 | original (leaky) | 471,744 | 1.3167 (0.011) | 1.3085 |
+| l1_l2_l3 | original (leaky) | 471,744 | 1.3312 (0.002) | 1.3184 |
+
+Held-out = last 500 KB of the corpus, never trained on. The leaky models were
+also scored with *causal* word ids (what generation sees): l1_l2 **3.693**,
+l1_l2_l3 **3.540** held-out — far worse than the ~1.75 of models trained on the
+fixed code. Nearly all of the old apparent gain was the leak (≈0.47 of train loss).
+
+**What the corrected numbers say, at this budget.** Layer 2 gives a small,
+consistent gain over flags only (l1 → l1_l2: 0.027 train / 0.020 held-out,
+every seed). Layer 3 adds nothing measurable (l1_l2 vs l1_l2_l3 within noise).
+The old `beside` layout is best on both measures, with about a third of the
+parameters — so "Layer 1 + Layer 2 is the loss win" is not supported, and the
+layered stack does not beat `beside` here. Caveats: one training budget
+(500 steps, small model), one corpus, 3 seeds; the layered arms carry a
+2048-row word embedding that may need more steps; `l1` carries the same unused
+word rows.
+
+**Also found.** `load_dataset(filepath)` never built the word vocab (only the
+default-file route did) and `word_vocab()` cached an empty vocab forever if
+called first — both left every word UNK. `export_word_table` read grammar at
+each word's *first* letter, so every word showed `PART_OF_SPEECH:NONE`.
+`tests/test_soft_constraints.py` needs `CONF_CLOSED_POS` and
+`all_constraints(flags_only=)`, which were never committed to `mdbe.py`
+(commit a2f87a7 added only the test). `cli.py` / `training.py` still import
+`Carbide` from `mdbe.py`, so the menu's training does not use the layer stack.
