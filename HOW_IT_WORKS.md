@@ -41,6 +41,8 @@ You can open this book and read:
 
 That is the point. A person can check it.
 
+The word book also has a learned cell for each word. After training, that cell is the model’s own opinion of the word, still sitting on the same named row.
+
 ## Layer 3 — the sentence book
 
 Layer 2’s words, in order, are a sentence. Layer 3 does not store the whole sentence as one giant title (almost every sentence in a book is unique, so that book would never fill in).
@@ -52,6 +54,28 @@ It keeps a **fixed-size summary** of the words so far, and writes sentence facts
 - does it look like it has an object?
 
 You can still dump this layer with names. You can also pin those tags onto the words you are already looking at.
+
+## Two copies of every page
+
+This is the part that keeps the design honest.
+
+- **Copy A** is the named strip: “this column is ARTICLE, this row is *the*, this number is 0.95.” You can print it.
+- **Copy B** is a mixed number-vector the guessing engine uses. After mixing, you can no longer point at one slot and say “that is ARTICLE.”
+
+Copy A is never thrown away. Copy B is what the engine trains on. If Copy A cannot be printed, the design has failed.
+
+## Soft scores and learned weights
+
+A **soft score** is a rule we wrote: “if the letters spell `the`, write 0.95 in ARTICLE.” It is a hint, not the model thinking.
+
+A **learned weight** (or learned cell) is a number the model itself moved during training, still sitting at a named row and a named column.
+
+- Layer 1 facts stay hard 0/1. They are the hex decoder.
+- Layer 2 and Layer 3 can hold both: the rule hint *and* a learned cell on the same named square.
+
+That is why a learned cell is *more* traceable than a mystery embedding, not less. You can open the square “word *cat*, column NOUN” and read the model’s number for that square.
+
+What you still cannot do is watch a movie of every private thought inside the guessing engine. You can watch the notebooks, and you can ask “which named column does this hidden unit listen to most?” That is the honest version of “watch it think.” See [TRACEABILITY.md](TRACEABILITY.md).
 
 ## What the “learning engine” is
 
@@ -71,6 +95,8 @@ We show it real books (the files in this repo). After each stretch of text it gu
 
 A short training run on the included books did learn: the error went down. That does not mean the program “understands” English. It means the labeled books plus the engine got better at the guessing game.
 
+New columns can be proposed automatically and parked **beside** the existing ones. A person still names what a proposed column is for. After enough training, unused proposals can be quieted and useful ones can be marked fixed.
+
 ## If you only remember one paragraph
 
-Carbide reads letters, builds words, then builds sentences — and it keeps a named notebook at each step. The guessing engine trains on those notebooks. You can open the notebooks. That is the whole idea.
+Carbide reads letters, builds words, then builds sentences — and it keeps a named notebook at each step. The guessing engine trains on the numbers in those notebooks. You can open the notebooks. That is the whole idea.
