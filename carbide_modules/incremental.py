@@ -29,14 +29,6 @@ class IncrementalState:
         conv_kernel = model.local_conv.kernel_size
         self.h = [torch.zeros(1, d_model, d_state) for _ in range(n_layers)]
         self.conv_buffer = torch.zeros(1, d_model, conv_kernel - 1)
-        # Real bytes already emitted, bounded to _HISTORY_LOOKBACK (the
-        # longer of: the longest hardcoded word/connective the word-level
-        # columns match against, or mdbe._CLAUSE_LOOKBACK -- the sentence-
-        # scale window _clause_scan needs to correctly re-derive "has this
-        # sentence had a verb yet" / "what was the previous word"). Same
-        # idea as conv_buffer above, just for
-        # mdbe.language_mechanics_constraints()'s lookback instead of
-        # LocalByteConv's.
         self.byte_history = []
         d_model = model.layers.d_model if hasattr(model, "layers") else d_model
         self.pack_run = torch.zeros(d_model)
@@ -94,16 +86,13 @@ def incremental_step(model, byte_x: int, state: IncrementalState):
         y = y + ssm.D * h_in[:, 0]
         x = (x[:, 0] + y).unsqueeze(1)
 
-    logits = model.head(self.head_norm(x))[0, 0] if False else model.head(model.head_norm(x))[0, 0]
+    logits = model.head(model.head_norm(x))[0, 0]
     return logits, state
 
 
 @torch.no_grad()
 def build_state(model, prefix_bytes) -> IncrementalState:
-    """Feeds a prefix through the incremental path from a cold state,
-    returning the resulting warm state (logits are discarded — callers
-    that need them should track the return of the last incremental_step
-    call instead, this helper is for warming up state only)."""
+    """Feeds a prefix through the incremental path from a cold state."""
     state = IncrementalState(model)
     for b in prefix_bytes:
         _, state = incremental_step(model, b, state)
