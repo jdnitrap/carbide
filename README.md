@@ -76,3 +76,5 @@ Default size (menu model): width 256, 4 layers. Smaller test runs are fine while
 Layer 1, Layer 2, and Layer 3 are live on this branch. Grammar sits beside the six hex flags. Training on the included books does reduce error (a short 800-step run on the 8 MB book dropped from about 2.88 to about 1.59). That is a health check, not a claim that the program understands language.
 
 Adding the word book (Layer 1 + Layer 2) helped the guessing game more than the current sentence pack. Layer 3 is still kept because the labeled sentence facts are part of the design, not because they already win on loss.
+
+**Correction (2026-09-21):** the size of that Layer 2 gain, and the loss numbers above, were measured while Layer 2 could see a word's identity before the word was finished (a lookahead leak, now fixed). With the leak removed, Layer 2 gives only a small gain (about 0.02 held-out loss), Layer 3 adds nothing measurable, and the plain `beside` layout is best. See the 2026-09-21 correction in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).

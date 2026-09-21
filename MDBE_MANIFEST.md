@@ -148,6 +148,10 @@ mean of last 50 steps:
 | l1_l2 (hex + word-row ingest) | 2.0136 | 2.0720 | 2.0418 | **2.0425** |
 | l1_l2_l3 (+ sentence pack) | 2.0313 | 2.0636 | 2.0447 | 2.0465 |
 
+> **Superseded (2026-09-21):** the table above was measured with a Layer 2 lookahead leak (now fixed).
+> Corrected held-out means: beside 1.7316, l1_l2 1.7526, l1_l2_l3 1.7529, l1 1.7721.
+> See the correction in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+
 Layer 1 + Layer 2 is the clear win on this budget. Layer 3 is a near-tie.
 It stays in the default stack because the labeled sentence book is part
 of the design, not because the current pack already beats Layer 2 on loss.
