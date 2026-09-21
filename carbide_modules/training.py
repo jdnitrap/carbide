@@ -134,8 +134,10 @@ def save_checkpoint(suffix=""):
         from .layers import word_vocab
         # the exact vocabulary this model's word rows were trained against
         extra['word_vocab'] = list(word_vocab()[0])
+    from . import mdbe
     torch.save({
         'model_kind': kind,
+        'soft_grammar': mdbe.SOFT_GRAMMAR,   # the input values this model was trained on
         **extra,
         'model_state': model.state_dict(),
         'opt_state': opt.state_dict(),
@@ -187,6 +189,9 @@ def load_checkpoint(suffix="", allow_migrate=False):
 
     kind = ckpt.get('model_kind', 'beside')  # checkpoints from before model kinds were beside models
     config.model_kind = kind
+    from . import mdbe
+    # a checkpoint with no record predates soft scores: it was trained on hard 0/1 grammar values
+    mdbe.SOFT_GRAMMAR = bool(ckpt.get('soft_grammar', False))
     model = _build_model(kind, with_table=False)   # the table itself is in the checkpoint's buffers
     if kind in ("layered", "graph") and 'word_vocab' in ckpt:
         from .layers import install_word_vocab

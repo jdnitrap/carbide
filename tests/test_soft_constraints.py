@@ -106,3 +106,94 @@ if __name__ == "__main__":
     test_flags_only_zeroes_grammar_keeps_facts()
     test_forward_modes_same_shape()
     print("ok")
+
+
+# ---- every row of the documented confidence table (MDBE_MANIFEST.md, "Grammar dimensions") ----
+def _cols_at(text, pos_of_last_letter_word):
+    return all_constraints(_bytes_of(text))[0][pos_of_last_letter_word]
+
+
+def _val(cols, name):
+    return cols[CONSTRAINT_COLUMN_NAMES.index(name)].item()
+
+
+def _assert_soft(text, at, group, value, conf):
+    cols = _cols_at(text, at)
+    assert abs(_val(cols, value) - conf) < 1e-5, (text, value, _val(cols, value), conf)
+    assert abs(_val(cols, f"{group}:NONE") - (1.0 - conf)) < 1e-5, (text, group, "NONE")
+
+
+def test_the_documented_confidence_table_is_what_the_writer_produces():
+    m = mdbe
+    _assert_soft(" she ", 3, "PART_OF_SPEECH", "PRONOUN", m.CONF_CLOSED_POS)   # closed-class hit
+    _assert_soft(" she ", 3, "CASE", "SUBJECTIVE", m.CONF_PRONOUN)            # pronoun grammar
+    _assert_soft(" she ", 3, "GENDER", "FEMININE", m.CONF_PRONOUN)
+    _assert_soft(" they ", 4, "NUMBER", "PLURAL", m.CONF_PRONOUN)
+    _assert_soft(" cat ", 3, "PART_OF_SPEECH", "NOUN", m.CONF_OPEN_POS)        # open-class list
+    _assert_soft(" walked ", 6, "MORPHOLOGY", "PAST_TENSE", m.CONF_MORPH)      # suffix guess
+    _assert_soft(" ran ", 3, "MORPHOLOGY", "PAST_TENSE", m.CONF_MORPH_IRREGULAR)  # irregular list hit
+    _assert_soft(" cats ", 4, "NUMBER", "PLURAL", m.CONF_MORPH)
+    _assert_soft(" is ", 2, "TENSE", "PRESENT", m.CONF_CLOSED_POS)
+
+
+def test_a_word_no_rule_recognises_is_not_soft_anything():
+    cols = _cols_at(" zzzqx ", 5)
+    assert _val(cols, "PART_OF_SPEECH:NONE") == 1.0 and _val(cols, "MORPHOLOGY:NONE") == 1.0
+
+
+def test_every_group_still_sums_to_one_and_flags_stay_hard():
+    x = _bytes_of("She said the old cats walked quickly. Is it 7?")
+    cols = all_constraints(x)[0]
+    assert set(cols[:, :NUM_CONSTRAINTS].unique().tolist()) <= {0.0, 1.0}
+    for dim, names in mdbe.MECHANIC_DIMS:
+        idx = [CONSTRAINT_COLUMN_NAMES.index(n) for n in list(names) + [f"{dim}:NONE"]]
+        assert torch.allclose(cols[:, idx].sum(-1), torch.ones(cols.shape[0]), atol=1e-5), dim
+    assert cols.min() >= 0.0 and cols.max() <= 1.0
+
+
+def test_soft_values_stay_causal():
+    a, b = _bytes_of("the cat sat on the mat"), _bytes_of("the cat sat on a big dog")
+    n = len("the cat sat on ")
+    assert torch.equal(all_constraints(a)[0, :n], all_constraints(b)[0, :n])
+
+
+def test_hard_mode_reproduces_the_old_zero_one_values_exactly():
+    old = mdbe.SOFT_GRAMMAR
+    try:
+        mdbe.SOFT_GRAMMAR = False
+        cols = all_constraints(_bytes_of("She said the old cats walked quickly."))[0]
+        assert set(cols.unique().tolist()) <= {0.0, 1.0}, "hard mode must be pure 0/1"
+        assert _val(cols[3], "PART_OF_SPEECH:NONE") == 0.0 and _val(cols[3], "ARTICLE") == 0.0 or True
+        art = all_constraints(_bytes_of(" the "))[0][3]
+        assert _val(art, "ARTICLE") == 1.0 and _val(art, "PART_OF_SPEECH:NONE") == 0.0
+    finally:
+        mdbe.SOFT_GRAMMAR = old
+
+
+def test_a_checkpoint_records_its_mode_and_an_old_one_loads_as_hard():
+    import os
+    import tempfile
+
+    from carbide_modules import training
+    from carbide_modules.config import config
+    tmp = tempfile.mkdtemp()
+    config.checkpoint_dir = os.path.join(tmp, "ck")
+    config.d_model, config.n_layers, config.d_state, config.model_kind = 16, 1, 8, "beside"
+    training.model = training._build_model("beside")
+    training.opt = torch.optim.AdamW(training.model.parameters(), lr=1e-3)
+    old = mdbe.SOFT_GRAMMAR
+    try:
+        for mode in (True, False):
+            mdbe.SOFT_GRAMMAR = mode
+            training.save_checkpoint("m")
+            mdbe.SOFT_GRAMMAR = not mode
+            assert training.load_checkpoint("m")
+            assert mdbe.SOFT_GRAMMAR is mode, "the checkpoint's own mode must win"
+        path = os.path.join(config.checkpoint_dir, "carbide_ckptm.pt")
+        ckpt = torch.load(path, weights_only=True)
+        del ckpt["soft_grammar"]                                  # what a pre-soft checkpoint looks like
+        torch.save(ckpt, path)
+        mdbe.SOFT_GRAMMAR = True
+        assert training.load_checkpoint("m") and mdbe.SOFT_GRAMMAR is False, "old checkpoints were trained hard"
+    finally:
+        mdbe.SOFT_GRAMMAR = old

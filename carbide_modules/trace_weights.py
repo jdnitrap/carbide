@@ -263,7 +263,7 @@ def export_full_table(model, filepath, byte_values=None, refresh_names=True):
         live = all_constraints(byte_tensor)[0, 0].tolist()
         char_repr = repr(chr(b)) if 32 <= b < 127 else ""
         rows.append([b, char_repr] + [f"{v:.4f}" for v in learned]
-                    + [f"{v:.0f}" for v in live])
+                    + [f"{v:g}" for v in live])
 
     embedding_header = [
         f"{names[d]['name']} (traces to {names[d]['constraint']}, r={names[d]['correlation']:.3f})"

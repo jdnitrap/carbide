@@ -147,6 +147,35 @@ def _load_discovered_dimensions(path=DISCOVERED_DIMENSIONS_PATH):
 DISCOVERED_MECHANIC_DIMS, _DISCOVERED_WORD_LOOKUP = _load_discovered_dimensions()
 MECHANIC_DIMS = MECHANIC_DIMS + DISCOVERED_MECHANIC_DIMS
 
+# Soft grammar scores (see MDBE_MANIFEST.md, "Grammar dimensions"). Only the six byte flags are hard
+# facts. A grammar column holds how sure the RULE is, and its group's ":NONE" column holds 1 - that.
+# The switch: True = the documented soft scores; False = every rule hit is a hard 1.0 (the behaviour
+# before soft scores existed). Measured 2026-09-21 (EXPERIMENT_LOG.md): hard was slightly better at
+# this scale, so it is a setting (model.soft_grammar) and each checkpoint records which it used.
+SOFT_GRAMMAR = True
+
+CONF_CLOSED_POS = 0.95         # closed-class part of speech / auxiliary list hit ("the" -> ARTICLE)
+CONF_PRONOUN = 0.90            # pronoun grammar: case, person, gender, number
+CONF_MORPH = 0.70              # a suffix guess
+CONF_MORPH_IRREGULAR = 0.85    # a hand-listed irregular form
+CONF_OPEN_POS = 0.45           # open-class part-of-speech lists (hand-listed, far from exhaustive)
+CONF_GUESS = 0.40              # syntax / voice / mood / aspect (clause-level guesses)
+CONF_DISCOVERED = 0.20         # a discovered *_LIKE cluster (a blob from one corpus) unless it earned more
+_CLOSED_POS_NAMES = frozenset({"ARTICLE", "PRONOUN", "PREPOSITION", "CONJUNCTION", "AUXILIARY_VERB", "NUMERAL"})
+
+
+def _load_discovered_confidence(path=DISCOVERED_DIMENSIONS_PATH):
+    """{(dimension, value): confidence}: the dimension's own stored confidence (a fixed cluster earns
+    a higher one), else CONF_DISCOVERED."""
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        data = json.load(f)
+    return {(name, e["value_name"]): float(e.get("confidence", CONF_DISCOVERED)) for name, e in data.items()}
+
+
+_DISCOVERED_CONFIDENCE = _load_discovered_confidence()
+
 
 def _discovered_scan(word: str):
     """First matching confirmed-discovered dimension for the real word
@@ -649,6 +678,13 @@ def language_mechanics_constraints(bytes_seq: torch.Tensor, history: torch.Tenso
     for dim, idx in _MECHANIC_NONE_INDEX.items():
         out_full[:, :, idx] = 1.0  # real "none" default everywhere, overwritten below
 
+    def put(b, pos, dim, value, conf):
+        """A group's value column holds the rule's confidence; its ':NONE' column holds 1 - confidence.
+        With SOFT_GRAMMAR off every hit is a hard 1.0."""
+        conf = conf if SOFT_GRAMMAR else 1.0
+        out_full[b, pos, _MECHANIC_NONE_INDEX[dim]] = 1.0 - conf
+        out_full[b, pos, _MECHANIC_VALUE_INDEX[dim][value]] = conf
+
     for b in range(B):
         text = _decode_ascii_lower(full[b].tolist())
         syntax_tags, voice_tags, aspect_tags, mood_tags = _clause_scan(text)
@@ -663,79 +699,66 @@ def language_mechanics_constraints(bytes_seq: torch.Tensor, history: torch.Tenso
 
                 morph = _morphology_scan(word)
                 if morph:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["MORPHOLOGY"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["MORPHOLOGY"][morph]] = 1.0
+                    conf = CONF_MORPH_IRREGULAR if (morph == "PAST_TENSE" and word in _IRREGULAR_PAST) else CONF_MORPH
+                    put(b, pos, "MORPHOLOGY", morph, conf)
 
                 pos_tag = _pos_scan(word)
                 if pos_tag:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["PART_OF_SPEECH"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["PART_OF_SPEECH"][pos_tag]] = 1.0
+                    put(b, pos, "PART_OF_SPEECH", pos_tag, CONF_CLOSED_POS if pos_tag in _CLOSED_POS_NAMES else CONF_OPEN_POS)
 
                 tense = _tense_scan(word, morph)
                 if tense:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["TENSE"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["TENSE"][tense]] = 1.0
+                    conf = CONF_CLOSED_POS if word in _TENSE_PRESENT_AUX else (
+                        CONF_MORPH_IRREGULAR if word in _IRREGULAR_PAST else CONF_MORPH)
+                    put(b, pos, "TENSE", tense, conf)
 
                 number = _number_scan(word, morph)
                 if number:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["NUMBER"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["NUMBER"][number]] = 1.0
+                    conf = CONF_PRONOUN if word in _NUMBER_PLURAL_PRONOUNS or word in _NUMBER_SINGULAR_PRONOUNS else CONF_MORPH
+                    put(b, pos, "NUMBER", number, conf)
 
                 case = _case_scan(word)
                 if case:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["CASE"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["CASE"][case]] = 1.0
+                    put(b, pos, "CASE", case, CONF_PRONOUN)
 
                 person = _person_scan(word)
                 if person:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["PERSON"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["PERSON"][person]] = 1.0
+                    put(b, pos, "PERSON", person, CONF_PRONOUN)
 
                 gender = _gender_scan(word)
                 if gender:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["GENDER"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["GENDER"][gender]] = 1.0
+                    put(b, pos, "GENDER", gender, CONF_PRONOUN)
 
                 degree = _degree_scan(word, morph, pos_tag)
                 if degree:
-                    out_full[b, pos, _MECHANIC_NONE_INDEX["DEGREE"]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX["DEGREE"][degree]] = 1.0
+                    if word in _DEGREE_COMPARATIVE_IRREGULAR or word in _DEGREE_SUPERLATIVE_IRREGULAR:
+                        conf = CONF_MORPH_IRREGULAR
+                    else:
+                        conf = CONF_OPEN_POS if degree == "POSITIVE" else CONF_MORPH
+                    put(b, pos, "DEGREE", degree, conf)
 
                 discovered = _discovered_scan(word)
                 if discovered:
                     disc_dim, disc_value = discovered
-                    out_full[b, pos, _MECHANIC_NONE_INDEX[disc_dim]] = 0.0
-                    out_full[b, pos, _MECHANIC_VALUE_INDEX[disc_dim][disc_value]] = 1.0
+                    put(b, pos, disc_dim, disc_value, _DISCOVERED_CONFIDENCE.get((disc_dim, disc_value), CONF_DISCOVERED))
 
-            syn = syntax_tags.get(pos)
-            if syn:
-                out_full[b, pos, _MECHANIC_NONE_INDEX["SYNTAX"]] = 0.0
-                out_full[b, pos, _MECHANIC_VALUE_INDEX["SYNTAX"][syn]] = 1.0
-
-            voice = voice_tags.get(pos)
-            if voice:
-                out_full[b, pos, _MECHANIC_NONE_INDEX["VOICE"]] = 0.0
-                out_full[b, pos, _MECHANIC_VALUE_INDEX["VOICE"][voice]] = 1.0
-
-            aspect = aspect_tags.get(pos)
-            if aspect:
-                out_full[b, pos, _MECHANIC_NONE_INDEX["ASPECT"]] = 0.0
-                out_full[b, pos, _MECHANIC_VALUE_INDEX["ASPECT"][aspect]] = 1.0
-
-            mood = mood_tags.get(pos)
-            if mood:
-                out_full[b, pos, _MECHANIC_NONE_INDEX["MOOD"]] = 0.0
-                out_full[b, pos, _MECHANIC_VALUE_INDEX["MOOD"][mood]] = 1.0
+            for dim, tags in (("SYNTAX", syntax_tags), ("VOICE", voice_tags), ("ASPECT", aspect_tags), ("MOOD", mood_tags)):
+                tag = tags.get(pos)
+                if tag:
+                    put(b, pos, dim, tag, CONF_GUESS)
 
     return out_full[:, H:]
 
 
-def all_constraints(bytes_seq: torch.Tensor, history: torch.Tensor = None) -> torch.Tensor:
+def all_constraints(bytes_seq: torch.Tensor, history: torch.Tensor = None, flags_only: bool = False) -> torch.Tensor:
     """The full live constraint tensor fed into MDBE/Block: the original
     6 byte-identity flags concatenated with the language-mechanics
-    columns above."""
-    return torch.cat([mdbe_constraints(bytes_seq),
-                       language_mechanics_constraints(bytes_seq, history)], dim=-1)
+    columns above. flags_only=True keeps the six hard facts and zeroes every grammar column
+    (the same shape, so it is a clean ablation mask)."""
+    flags = mdbe_constraints(bytes_seq)
+    if flags_only:
+        return torch.cat([flags, flags.new_zeros(*flags.shape[:-1], NUM_LANGUAGE_MECHANICS)], dim=-1)
+    return torch.cat([flags, language_mechanics_constraints(bytes_seq, history)], dim=-1)
 
 
 BYTE_IDENTITY_COLUMN_NAMES = ["is_alpha", "is_digit", "is_upper", "is_punct", "is_space", "utf8_lead"]
@@ -830,7 +853,7 @@ def export_mdbe_table(model: "Carbide", filepath: str) -> None:
         live = all_constraints(byte_tensor)[0, 0].tolist()
         char_repr = repr(chr(b)) if 32 <= b < 127 else ""
         rows.append([b, char_repr] + [f"{v:.4f}" for v in learned]
-                    + [f"{v:.0f}" for v in live])
+                    + [f"{v:g}" for v in live])
     header = (["byte", "character"]
               + [f"cell_{i}" for i in range(model.mdbe.base.embedding_dim)]
               + ["is_alpha", "is_digit", "is_upper", "is_punct", "is_space", "utf8_lead"]
