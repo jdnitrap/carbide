@@ -11,8 +11,9 @@ def test_strips_shapes():
     assert s["flags"].shape == (1, T, 6)
     assert s["strip"].shape[-1] == STRIP_WIDTH
     assert s["l3"].shape[-1] == NUM_SENTENCE_DIMS
-    assert s["word_str"][0][0] == "the"
-    assert s["word_ids"][0, 0] == s["word_ids"][0, 1]
+    # a word is known only once its delimiter arrives (see spans_from_bytes):
+    # 'the' completes at the space (position 3), 'cat' at the '.' (position 7)
+    assert s["word_str"][0] == ["", "", "", "the", "the", "the", "the", "cat"]
 
 
 def test_carbide_modes_run():

@@ -61,6 +61,7 @@ def build_word_vocab(corpus_path=None, max_size=WORD_VOCAB_SIZE - 1):
         words = [w for w, _ in counts.most_common(max_size)]
         with open(WORD_VOCAB_PATH, "w") as f:
             json.dump({"words": words}, f)
+        _reset_vocab_cache()  # a vocab built after word_vocab() first ran must be picked up
     return words
 
 
@@ -68,10 +69,23 @@ _VOCAB_WORDS = None
 _WORD_TO_ID = None
 
 
+def _reset_vocab_cache():
+    global _VOCAB_WORDS, _WORD_TO_ID
+    _VOCAB_WORDS = None
+    _WORD_TO_ID = None
+
+
 def word_vocab():
+    """(words, word->id). An EMPTY vocabulary is never cached: if the first
+    call happens before word_vocab.json exists (e.g. generating from a loaded
+    checkpoint before a dataset is loaded), caching [] would leave every
+    word as UNK for the rest of the process even after the file is built."""
     global _VOCAB_WORDS, _WORD_TO_ID
     if _VOCAB_WORDS is None:
-        _VOCAB_WORDS = build_word_vocab()
+        words = build_word_vocab()
+        if not words:
+            return [], {}
+        _VOCAB_WORDS = words
         _WORD_TO_ID = {w: i + 1 for i, w in enumerate(_VOCAB_WORDS[:WORD_VOCAB_SIZE - 1])}
     return _VOCAB_WORDS, _WORD_TO_ID
 
@@ -81,94 +95,115 @@ def word_id_for(token: str) -> int:
     return table.get(token.lower(), UNK_ID)
 
 
-def spans_from_bytes(bytes_seq, history=None):
-    """Per-position word string and sentence id. Causal. history = prior bytes."""
+_SENTENCE_END_BYTES = (46, 63, 33, 10)  # . ? ! newline
+
+
+def new_stream_state():
+    """Everything a one-byte-at-a-time decode must carry so it computes the
+    exact same L2/L3 values a full forward pass would: the partly-spelled
+    word, the last COMPLETED word, the sentence counter, and Layer 3's running
+    per-sentence maxima. Windowed `history` cannot supply these reliably (a
+    word or sentence can start before the window)."""
+    return {
+        "span": {"buf": [], "last_wid": UNK_ID, "last_word": "", "sid": 0},
+        "sent": {"last_sid": None, "mx": [0.0] * 5, "n": 0},
+    }
+
+
+def _scan_spans(chars, st):
+    """One pass over `chars`, mutating span state `st`. Strictly causal: the
+    word id at byte i depends only on bytes <= i.
+
+    A word becomes known at the delimiter byte that COMPLETES it, and is
+    carried forward from there; letters of a word still being spelled see the
+    previous completed word (context), never the word they are spelling --
+    exactly the rule esgr's word_at_position() follows. (Assigning a word's id
+    to all of its letters, as this used to, lets byte 't' of "the" already
+    know the word is "the": the model reads the answer it is asked to predict.)
+    """
+    wids, sids, words = [], [], []
+    for v in chars:
+        v = int(v)
+        alpha = _is_alpha_byte(v)
+        if alpha:
+            st["buf"].append(chr(_lower_byte(v)))
+        elif st["buf"]:
+            tok = "".join(st["buf"])
+            st["buf"] = []
+            st["last_word"], st["last_wid"] = tok, word_id_for(tok)
+        wids.append(st["last_wid"])
+        words.append(st["last_word"])
+        sids.append(st["sid"])
+        if not alpha and v in _SENTENCE_END_BYTES:
+            st["sid"] += 1
+    return wids, sids, words
+
+
+def spans_from_bytes(bytes_seq, history=None, state=None):
+    """Per-position (word_ids, sent_ids, word_str). Causal (see _scan_spans).
+
+    Full forward: `history` (prior bytes) is prepended, everything is scanned
+    from a cold state, and only the positions of `bytes_seq` are returned.
+    Streaming: pass `state` (the "span" part of new_stream_state()); only
+    `bytes_seq` is scanned, the state carries all prior context, and
+    `history` is not consulted. Batch size must be 1 in streaming mode."""
     B, T = bytes_seq.shape
+    word_ids = torch.zeros(B, T, dtype=torch.long)
+    sent_ids = torch.zeros(B, T, dtype=torch.long)
+    word_str = []
+    if state is not None:
+        assert B == 1, "streaming span state is single-sequence"
+        w, sd, ws = _scan_spans(bytes_seq[0].tolist(), state)
+        word_ids[0] = torch.tensor(w, dtype=torch.long)
+        sent_ids[0] = torch.tensor(sd, dtype=torch.long)
+        return word_ids, sent_ids, [ws]
     if history is None:
         history = bytes_seq.new_zeros(B, 0)
     H = history.shape[1]
     full = torch.cat([history, bytes_seq], dim=1)
-    word_ids = torch.zeros(B, T, dtype=torch.long)
-    sent_ids = torch.zeros(B, T, dtype=torch.long)
-    word_str = [[""] * T for _ in range(B)]
     for b in range(B):
-        chars = full[b].tolist()
-        sid = 0
-        buf = []
-        start = 0
-        for i, v in enumerate(chars):
-            if _is_alpha_byte(int(v)):
-                if not buf:
-                    start = i
-                buf.append(chr(_lower_byte(int(v))))
-            else:
-                if buf:
-                    tok = "".join(buf)
-                    wid = word_id_for(tok)
-                    for j in range(start, i):
-                        if j >= H:
-                            t = j - H
-                            word_ids[b, t] = wid
-                            word_str[b][t] = tok
-                    buf = []
-                if i >= H:
-                    t = i - H
-                    sent_ids[b, t] = sid
-                if int(v) in (46, 63, 33, 10):
-                    sid += 1
-                continue
-            if i >= H:
-                t = i - H
-                sent_ids[b, t] = sid
-        if buf:
-            tok = "".join(buf)
-            wid = word_id_for(tok)
-            end = full.shape[1]
-            for j in range(start, end):
-                if j >= H:
-                    t = j - H
-                    if t < T:
-                        word_ids[b, t] = wid
-                        word_str[b][t] = tok
+        st = new_stream_state()["span"]
+        w, sd, ws = _scan_spans(full[b].tolist(), st)
+        word_ids[b] = torch.tensor(w[H:], dtype=torch.long)
+        sent_ids[b] = torch.tensor(sd[H:], dtype=torch.long)
+        word_str.append(ws[H:])
     return word_ids, sent_ids, word_str
 
 
-def sentence_columns(cols, sent_ids):
-    """L3 values: max of selected grammar hints over the current sentence so far."""
+def sentence_columns(cols, sent_ids, state=None):
+    """L3 values: running max of selected grammar hints over the current
+    sentence so far (causal). With `state` (the "sent" part of
+    new_stream_state()) the running maxima and sentence position carry across
+    calls, so a one-byte step matches the full forward pass; batch size must
+    be 1 then."""
     names = LANGUAGE_MECHANICS_NAMES
-    def idx(name):
-        return names.index(name) if name in names else None
-
     gram = cols[..., NUM_CONSTRAINTS:]
     B, T, _ = gram.shape
     out = gram.new_zeros(B, T, NUM_SENTENCE_DIMS)
-    i_neg = idx("negation")
-    i_obj = idx("OBJECT")
-    i_int = idx("INTERROGATIVE")
-    i_imp = idx("IMPERATIVE")
-    i_q = idx("pragmatics")
+    # source columns, in the order the running maxima are kept:
+    # INTERROGATIVE, pragmatics, IMPERATIVE, negation, OBJECT (missing -> 0)
+    sel = gram.new_zeros(B, T, 5)
+    for k, name in enumerate(("INTERROGATIVE", "pragmatics", "IMPERATIVE", "negation", "OBJECT")):
+        if name in names:
+            sel[..., k] = gram[..., names.index(name)]
+    sel = sel.tolist()
+    if state is not None:
+        assert B == 1, "streaming sentence state is single-sequence"
     for b in range(B):
-        start = 0
+        st = state if state is not None else {"last_sid": None, "mx": [0.0] * 5, "n": 0}
+        rows = []
         for t in range(T):
-            if t and int(sent_ids[b, t]) != int(sent_ids[b, t - 1]):
-                start = t
-            sl = gram[b, start:t + 1]
-            inter = 0.0
-            if i_int is not None:
-                inter = float(sl[:, i_int].max())
-            if i_q is not None:
-                inter = max(inter, float(sl[:, i_q].max()))
-            imp = float(sl[:, i_imp].max()) if i_imp is not None else 0.0
-            neg = float(sl[:, i_neg].max()) if i_neg is not None else 0.0
-            obj = float(sl[:, i_obj].max()) if i_obj is not None else 0.0
-            multi = 1.0 if (t - start) > 48 else 0.0
-            decl = max(0.0, 1.0 - inter - imp)
-            out[b, t, 0] = decl
-            out[b, t, 1] = inter
-            out[b, t, 2] = imp
-            out[b, t, 3] = neg
-            out[b, t, 4] = obj
-            out[b, t, 5] = multi
+            sid = int(sent_ids[b, t])
+            if st["last_sid"] is not None and sid != st["last_sid"]:
+                st["mx"], st["n"] = [0.0] * 5, 0
+            st["last_sid"] = sid
+            st["mx"] = mx = [max(a, r) for a, r in zip(st["mx"], sel[b][t])]
+            inter, imp, neg, obj = max(mx[0], mx[1]), mx[2], mx[3], mx[4]
+            multi = 1.0 if st["n"] > 48 else 0.0
+            st["n"] += 1
+            rows.append([max(0.0, 1.0 - inter - imp), inter, imp, neg, obj, multi])
+        if rows:
+            out[b] = torch.tensor(rows, dtype=out.dtype)
     return out
 
 
@@ -188,13 +223,16 @@ def causal_pack(h, sent_ids):
     return out
 
 
-def strips(bytes_seq, history=None):
-    """Single API: named L1/L2/L3 values + ids. Used by train, generate, export."""
+def strips(bytes_seq, history=None, stream=None):
+    """Single API: named L1/L2/L3 values + ids. Used by train, generate, export.
+    `stream` (new_stream_state()) makes a one-byte call match a full forward;
+    `history` still feeds the grammar columns' bounded lookback."""
     cols = all_constraints(bytes_seq, history=history)
     flags = cols[..., :NUM_CONSTRAINTS]
     grammar = cols[..., NUM_CONSTRAINTS:]
-    word_ids, sent_ids, word_str = spans_from_bytes(bytes_seq, history=history)
-    l3 = sentence_columns(cols, sent_ids)
+    word_ids, sent_ids, word_str = spans_from_bytes(
+        bytes_seq, history=history, state=None if stream is None else stream["span"])
+    l3 = sentence_columns(cols, sent_ids, state=None if stream is None else stream["sent"])
     strip = torch.cat([flags, grammar, l3], dim=-1)
     return {
         "cols": cols,
@@ -222,8 +260,8 @@ class LayerStack(nn.Module):
         self.pack_proj = nn.Linear(d_model, d_model, bias=False)
         self.mix = nn.Linear(d_model, d_model)
 
-    def forward(self, bytes_seq, history=None, mode="full", pack_state=None):
-        s = strips(bytes_seq, history=history)
+    def forward(self, bytes_seq, history=None, mode="full", pack_state=None, stream=None):
+        s = strips(bytes_seq, history=history, stream=stream)
         flags, grammar, l3 = s["flags"], s["grammar"], s["l3"]
         word_ids = s["word_ids"].to(bytes_seq.device)
         sent_ids = s["sent_ids"].to(bytes_seq.device)
@@ -278,7 +316,8 @@ def named_values(s, batch=0, pos=0):
 
 def export_word_table(model, filepath, sample_text="the cat sat."):
     """Dump Layer-2 word rows + grammar + pinned L3 tags for a sample."""
-    bt = torch.tensor([[ord(c) if ord(c) < 256 else 32 for c in sample_text]])
+    # trailing space so the last word completes (a word is only known once its delimiter arrives)
+    bt = torch.tensor([[ord(c) if ord(c) < 256 else 32 for c in sample_text + " "]])
     s = strips(bt)
     seen = {}
     rows = []
@@ -286,8 +325,9 @@ def export_word_table(model, filepath, sample_text="the cat sat."):
         if not w or w in seen:
             continue
         seen[w] = True
-        gram = s["grammar"][0, t].tolist()
-        l3 = s["l3"][0, t].tolist()
+        g = max(t - 1, 0)  # t is the delimiter that completed w; its last letter is at t-1
+        gram = s["grammar"][0, g].tolist()
+        l3 = s["l3"][0, g].tolist()
         rows.append([w, int(s["word_ids"][0, t])]
                     + [f"{v:.4f}" for v in gram]
                     + [f"{v:.4f}" for v in l3])

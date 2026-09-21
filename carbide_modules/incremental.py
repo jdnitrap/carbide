@@ -12,11 +12,13 @@ pass in carbide/tests/test_incremental_decode.py (matches to float32
 precision, ~1e-6), the same way the chunked scan was verified against
 the naive per-step reference in test_scan.py.
 """
+import copy
+
 import torch
 import torch.nn.functional as F
 
 from .mdbe import _MAX_LOOKBACK, _CLAUSE_LOOKBACK
-from .layers import strips
+from .layers import new_stream_state
 
 _HISTORY_LOOKBACK = max(_MAX_LOOKBACK, _CLAUSE_LOOKBACK)
 
@@ -34,6 +36,7 @@ class IncrementalState:
         self.pack_run = torch.zeros(d_model)
         self.pack_n = 0
         self.pack_sid = None
+        self.stream = new_stream_state()  # word/sentence/Layer-3 running state
 
     def clone(self):
         s = IncrementalState.__new__(IncrementalState)
@@ -43,6 +46,7 @@ class IncrementalState:
         s.pack_run = self.pack_run.clone()
         s.pack_n = self.pack_n
         s.pack_sid = self.pack_sid
+        s.stream = copy.deepcopy(self.stream)
         return s
 
 
@@ -53,7 +57,8 @@ def incremental_step(model, byte_x: int, state: IncrementalState):
     history = torch.tensor([state.byte_history]) if state.byte_history else None
     if hasattr(model, "layers"):
         pack = [state.pack_run, state.pack_n, state.pack_sid]
-        emb, s = model.layers(bt, history=history, mode="full", pack_state=pack)
+        emb, s = model.layers(bt, history=history, mode="full", pack_state=pack,
+                              stream=state.stream)
         cols = s["strip"]
         state.pack_run, state.pack_n, state.pack_sid = pack[0], pack[1], pack[2]
     else:
