@@ -1,12 +1,17 @@
-Carbide now lives in carbide_modules/layers.py together with LayerStack.
+Carbide lives in carbide_modules/layers.py together with LayerStack.
 
 Import:
-    from carbide_modules.layers import Carbide, LayerStack, strips
+    from carbide_modules.layers import Carbide, LayerStack, strips, STRIP_WIDTH
 
-mdbe.py still owns the 6 hex flags, grammar columns, SelectiveSSM, and MDBE.base/proj.
-LayerStack + Block + Carbide sit in layers.py so the three named tables
-feed the mixer and the SSM sees only numbers.
+mdbe.py owns the 6 hex flags, grammar columns, SelectiveSSM, and MDBE.base/proj.
+layers.py owns Layer 1 / 2 / 3 ingest, named strips, Block re-injection, Carbide.
+trace_weights.py owns read-only labels for learned cells.
+discover_dimension.py owns proposed extra columns (beside only; fix after training).
 
-Training / CLI should switch their Carbide import to layers when you next
-edit those files:
-    from .layers import Carbide
+The SSM sees numbers only. Names stay on Copy A (strips / named_values).
+
+Docs for people:
+    HOW_IT_WORKS.md
+    TRACEABILITY.md
+    MDBE_MANIFEST.md
+    README.md
