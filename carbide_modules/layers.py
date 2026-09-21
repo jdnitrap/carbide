@@ -47,22 +47,62 @@ def _lower_byte(v):
     return v + 32 if 65 <= v <= 90 else v
 
 
-def build_word_vocab(corpus_path=None, max_size=WORD_VOCAB_SIZE - 1):
-    """Top-N lowercase words + reserved UNK=0. Persists word_vocab.json."""
+WORD_VOCAB_HEADROOM = 256  # rows the FIRST corpus leaves free so later datasets can still add words
+
+
+def _read_vocab_file():
     if os.path.exists(WORD_VOCAB_PATH):
         with open(WORD_VOCAB_PATH) as f:
-            words = json.load(f).get("words") or []
-        if words:
-            return words[:max_size]
-    words = []
+            return list(json.load(f).get("words") or [])
+    return []
+
+
+def _write_vocab_file(words):
+    with open(WORD_VOCAB_PATH, "w") as f:
+        json.dump({"words": list(words)}, f)
+
+
+def build_word_vocab(corpus_path=None, max_size=WORD_VOCAB_SIZE - 1):
+    """Lowercase word list; word i is Layer-2 row i+1 (row 0 = UNK). Persists
+    word_vocab.json.
+
+    IDs are STABLE and only grow: a word that already has an id keeps it forever
+    (a trained model's word table is indexed by them), and a new corpus can only
+    APPEND its most frequent unseen words. The first corpus stops
+    WORD_VOCAB_HEADROOM short of the table size, so later datasets have room; once
+    the table is full, further words map to UNK (a known limit until the table is
+    grown -- see LayerStack)."""
+    words = _read_vocab_file()[:max_size]
     if corpus_path and os.path.exists(corpus_path):
-        text = open(corpus_path, "rb").read(3_000_000).decode("ascii", errors="replace").lower()
-        counts = Counter(re.findall(r"[a-z]+", text))
-        words = [w for w, _ in counts.most_common(max_size)]
-        with open(WORD_VOCAB_PATH, "w") as f:
-            json.dump({"words": words}, f)
-        _reset_vocab_cache()  # a vocab built after word_vocab() first ran must be picked up
+        limit = max_size if words else max_size - WORD_VOCAB_HEADROOM
+        if len(words) < limit:
+            text = open(corpus_path, "rb").read(3_000_000).decode("ascii", errors="replace").lower()
+            have = set(words)
+            new = [w for w, _ in Counter(re.findall(r"[a-z]+", text)).most_common()
+                   if w not in have][: limit - len(words)]
+            if new or not os.path.exists(WORD_VOCAB_PATH):
+                words = words + new
+                _write_vocab_file(words)
+                _reset_vocab_cache()  # a vocab built after word_vocab() first ran must be picked up
     return words
+
+
+def install_word_vocab(words):
+    """Make `words` the active vocabulary -- used when a checkpoint carries the
+    vocabulary it was trained with, so its word rows keep meaning what they meant.
+    If word_vocab.json only grew past it (append-only) nothing changes; if it
+    conflicts, the old file is backed up to word_vocab.json.bak and replaced.
+    Returns a short note (or None) for the caller to print."""
+    words, current, note = list(words), _read_vocab_file(), None
+    if current[:len(words)] != words:
+        if current:
+            import shutil
+            shutil.copy(WORD_VOCAB_PATH, WORD_VOCAB_PATH + ".bak")
+            note = (f"word_vocab.json did not match this checkpoint's vocabulary; "
+                    f"replaced it (old copy kept as word_vocab.json.bak)")
+        _write_vocab_file(words)
+    _reset_vocab_cache()
+    return note
 
 
 _VOCAB_WORDS = None

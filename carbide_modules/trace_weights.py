@@ -96,13 +96,20 @@ def label_constraint_proj_weights(constraint_proj: torch.nn.Linear, top_k=3):
     layer's entire input IS the named constraint vector. Returns a list
     of d_model {dim, top_labels: [(constraint_name, weight), ...]}
     dicts."""
-    W = constraint_proj.weight  # (d_model, len(CONSTRAINT_NAMES)) -- bias=False
-    d_model = W.shape[0]
+    W = constraint_proj.weight  # (d_model, n_input_columns) -- bias=False
+    d_model, n_cols = W.shape
+    names = list(CONSTRAINT_NAMES)
+    if n_cols > len(names):
+        # the layered model's blocks also take the Layer-3 sentence columns after
+        # the flag + grammar columns; name them instead of indexing past the list
+        from .layers import L3_NAMES
+        names += [f"L3:{n}" for n in L3_NAMES]
+    names += [f"col_{i}" for i in range(len(names), n_cols)]  # never index out of range
     results = []
     for d in range(d_model):
         row = W[d]
-        top = torch.topk(row.abs(), k=min(top_k, len(CONSTRAINT_NAMES)))
-        labels = [(CONSTRAINT_NAMES[i], row[i].item()) for i in top.indices.tolist()]
+        top = torch.topk(row.abs(), k=min(top_k, n_cols))
+        labels = [(names[i], row[i].item()) for i in top.indices.tolist()]
         results.append({"dim": d, "top_labels": labels})
     return results
 

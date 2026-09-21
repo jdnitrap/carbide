@@ -14,3 +14,7 @@ carbide_loss_live.png
 carbide_telemetry.png
 carbide_ablation.png
 *.bak
+
+# generated per corpus / per checkpoint (a checkpoint also carries its own copy)
+word_vocab.json
+word_vocab.json.bak

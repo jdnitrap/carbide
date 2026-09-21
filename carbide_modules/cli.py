@@ -339,6 +339,7 @@ Current settings:
   batch_size:   {config.batch_size}
   seq_len:      {config.seq_len}
   learning_rate: {config.learning_rate}
+  model_kind:   {config.model_kind}
 
 1. d_model (embedding dimension)
 2. n_layers (SSM blocks)
@@ -346,11 +347,12 @@ Current settings:
 4. batch_size
 5. seq_len (context window, bytes)
 6. learning_rate
-7. Back
+7. model_kind (beside = best measured | layered = full L1/L2/L3)
+8. Back
 """)
     choice = input("Edit: ").strip()
 
-    if choice in ("1", "2", "3") and train_state.training_active:
+    if choice in ("1", "2", "3", "7") and train_state.training_active:
         print("  ⚠ Background training is active — stop it first (Main Menu → 1 → Stop background training)")
         print("    before changing d_model/n_layers/d_state. Batch size, seq_len, and learning rate are")
         print("    safe to change while training runs.")
@@ -369,11 +371,17 @@ Current settings:
             config.seq_len = int(input("  New seq_len: "))
         elif choice == "6":
             config.learning_rate = float(input("  New learning_rate: "))
+        elif choice == "7":
+            kind = input("  model_kind (beside/layered): ").strip().lower()
+            if kind not in training.MODEL_KINDS:
+                print(f"  ✗ Choose one of: {', '.join(training.MODEL_KINDS)}")
+                return
+            config.model_kind = kind
     except ValueError:
         print("  ✗ Please enter a valid number")
         return
 
-    if choice in ["1", "2", "3"]:
+    if choice in ["1", "2", "3", "7"]:
         training.model = None
         training.opt = None
         print("  ⚠ Model structure changed — model will be reinitialized on next training step")

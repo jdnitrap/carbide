@@ -32,6 +32,7 @@ def _maybe_snapshot_mdbe(step):
     consistent, meaningful constraint label over training, rather than
     just asserting it once at the end."""
     if step % config.mdbe_snapshot_interval == 0:
+        os.makedirs(config.mdbe_snapshot_dir, exist_ok=True)  # absent on a fresh clone
         path = f"{config.mdbe_snapshot_dir}/mdbe_table_step{step}.csv"
         export_mdbe_table(model, path)
         trace_path = f"{config.mdbe_snapshot_dir}/weight_trace_step{step}.csv"
@@ -50,10 +51,27 @@ def _maybe_autosave_checkpoint(step):
         save_checkpoint()
 
 
+MODEL_KINDS = ("beside", "layered")
+
+
+def _build_model(kind=None):
+    """The one place a model object is created, so init and checkpoint-load agree."""
+    kind = kind or config.model_kind
+    if kind == "beside":
+        return Carbide(d_model=config.d_model, n_layers=config.n_layers, d_state=config.d_state)
+    if kind == "layered":
+        from .layers import Carbide as LayeredCarbide
+        return LayeredCarbide(d_model=config.d_model, n_layers=config.n_layers, d_state=config.d_state)
+    raise ValueError(f"unknown model kind {kind!r}; expected one of {MODEL_KINDS}")
+
+
+def _kind_of(m):
+    return "layered" if hasattr(m, "layers") else "beside"
+
+
 def init_model():
     global model, opt
-    model = Carbide(d_model=config.d_model, n_layers=config.n_layers,
-                    d_state=config.d_state)
+    model = _build_model()
     opt = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"✓ Model initialized: {n_params:,} parameters")
@@ -76,8 +94,17 @@ def train_step():
 
 def save_checkpoint(suffix=""):
     """Save model, optimizer, and training state."""
+    os.makedirs(config.checkpoint_dir, exist_ok=True)  # absent on a fresh clone
     filename = f"{config.checkpoint_dir}/carbide_ckpt{suffix}.pt"
+    kind = _kind_of(model)
+    extra = {}
+    if kind == "layered":
+        from .layers import word_vocab
+        # the exact vocabulary this model's word rows were trained against
+        extra['word_vocab'] = list(word_vocab()[0])
     torch.save({
+        'model_kind': kind,
+        **extra,
         'model_state': model.state_dict(),
         'opt_state': opt.state_dict(),
         'train_state': train_state.to_dict(),
@@ -126,9 +153,14 @@ def load_checkpoint(suffix="", allow_migrate=False):
     config.d_state = ckpt['config']['d_state']
     config.learning_rate = ckpt['config'].get('learning_rate', config.learning_rate)
 
-    model = Carbide(d_model=config.d_model,
-                    n_layers=config.n_layers,
-                    d_state=config.d_state)
+    kind = ckpt.get('model_kind', 'beside')  # checkpoints from before model kinds were beside models
+    config.model_kind = kind
+    model = _build_model(kind)
+    if kind == "layered" and 'word_vocab' in ckpt:
+        from .layers import install_word_vocab
+        note = install_word_vocab(ckpt['word_vocab'])
+        if note:
+            print(f"  ⚠ {note}")
 
     # Real column IDENTITY check, not just a count/shape check. Two
     # different discovered-dimension sets can total the same number of
