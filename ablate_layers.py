@@ -1,6 +1,6 @@
 """Layer ablation for the three-layer MDBE stack. Same batches, seeds and init for every arm.
 
-  python3 ablate_layers.py --arm {beside,l1,l1_l2,l1_l2_l3} --seed 0 --steps 500 --d_model 128
+  python3 ablate_layers.py --arm {beside,l1,l1_l2,l1_l2_l3,l1_l2_graph,l1_graph} --seed 0 --steps 500 --d_model 128
   (run from the repo root; --repo points it at another checkout, e.g. an older commit)
 
 `beside` = the old mdbe.Carbide in mode "full" (six flags + grammar beside them, no word/sentence
@@ -23,6 +23,7 @@ ap.add_argument("--threads", type=int, default=3); ap.add_argument("--vocab", de
 ap.add_argument("--out", default=None); ap.add_argument("--save", default=None)
 ap.add_argument("--load", default=None, help="skip training; evaluate this saved layers.Carbide state_dict")
 ap.add_argument("--tag", default="")
+ap.add_argument("--graphdb", default="graph_memory.db", help="graph memory used by the graph arms (l1_l2_graph, l1_graph)")
 a = ap.parse_args()
 
 sys.path.insert(0, a.repo); os.chdir(a.repo)
@@ -42,6 +43,13 @@ train_end = len(data) - HELD_OUT
 
 def make_model():
     torch.manual_seed(a.seed)
+    if a.arm in L.GRAPH_MODES:
+        from carbide_modules.graphmem import GraphStore, N_GRAPH_COLS, compile_for_vocab
+        m = L.Carbide(d_model=a.d_model, n_layers=a.n_layers, d_state=a.d_state,
+                      graph_cols=N_GRAPH_COLS, default_mode=a.arm)
+        with GraphStore(a.graphdb) as store:
+            m.set_graph_table(compile_for_vocab(store, L.word_vocab()[0], L.WORD_VOCAB_SIZE).table)
+        return m
     return (OldCarbide if a.arm == "beside" else L.Carbide)(d_model=a.d_model, n_layers=a.n_layers, d_state=a.d_state)
 mode = "full" if a.arm == "beside" else a.arm
 

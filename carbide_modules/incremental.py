@@ -57,9 +57,10 @@ def incremental_step(model, byte_x: int, state: IncrementalState):
     history = torch.tensor([state.byte_history]) if state.byte_history else None
     if hasattr(model, "layers"):
         pack = [state.pack_run, state.pack_n, state.pack_sid]
-        emb, s = model.layers(bt, history=history, mode="full", pack_state=pack,
-                              stream=state.stream)
-        cols = s["strip"]
+        mode = getattr(model, "default_mode", "full")
+        use = "full" if mode in ("full", "l1_l2_l3") else mode
+        emb, s = model.layers(bt, history=history, mode=use, pack_state=pack, stream=state.stream)
+        cols = model.constraint_cols_for(mode, s)
         state.pack_run, state.pack_n, state.pack_sid = pack[0], pack[1], pack[2]
     else:
         from .mdbe import all_constraints

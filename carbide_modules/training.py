@@ -51,10 +51,10 @@ def _maybe_autosave_checkpoint(step):
         save_checkpoint()
 
 
-MODEL_KINDS = ("beside", "layered")
+MODEL_KINDS = ("beside", "layered", "graph")
 
 
-def _build_model(kind=None):
+def _build_model(kind=None, with_table=True):
     """The one place a model object is created, so init and checkpoint-load agree."""
     kind = kind or config.model_kind
     if kind == "beside":
@@ -62,11 +62,43 @@ def _build_model(kind=None):
     if kind == "layered":
         from .layers import Carbide as LayeredCarbide
         return LayeredCarbide(d_model=config.d_model, n_layers=config.n_layers, d_state=config.d_state)
+    if kind == "graph":
+        from .graphmem import N_GRAPH_COLS
+        from .layers import Carbide as LayeredCarbide
+        m = LayeredCarbide(d_model=config.d_model, n_layers=config.n_layers, d_state=config.d_state,
+                           graph_cols=N_GRAPH_COLS, default_mode="l1_l2_graph")
+        if with_table:
+            m.set_graph_table(compile_graph_table())
+        return m
     raise ValueError(f"unknown model kind {kind!r}; expected one of {MODEL_KINDS}")
 
 
 def _kind_of(m):
-    return "layered" if hasattr(m, "layers") else "beside"
+    if not hasattr(m, "layers"):
+        return "beside"
+    return "graph" if m.layers.graph_cols else "layered"
+
+
+def compile_graph_table():
+    """Compile the graph memory (config.graph_db) into the table the graph model reads,
+    aligned to the current Layer-2 vocabulary."""
+    from .graphmem import GraphStore, compile_for_vocab
+    from .layers import WORD_VOCAB_SIZE, word_vocab
+    if not os.path.exists(config.graph_db):
+        raise RuntimeError(f"no graph database at {config.graph_db!r}. Build it first:\n"
+                           f"  python -m carbide_modules.graphmem build-core --corpus <your corpus>")
+    words = list(word_vocab()[0])
+    if not words:
+        raise RuntimeError("the Layer-2 word vocabulary is empty; load a dataset first")
+    with GraphStore(config.graph_db) as store:
+        return compile_for_vocab(store, words, WORD_VOCAB_SIZE).table
+
+
+def refresh_graph_table():
+    """Re-read the graph into the live graph model (e.g. after new knowledge was dumped in)."""
+    if model is None or _kind_of(model) != "graph":
+        raise RuntimeError("the current model is not a graph model")
+    model.set_graph_table(compile_graph_table())
 
 
 def init_model():
@@ -98,7 +130,7 @@ def save_checkpoint(suffix=""):
     filename = f"{config.checkpoint_dir}/carbide_ckpt{suffix}.pt"
     kind = _kind_of(model)
     extra = {}
-    if kind == "layered":
+    if kind in ("layered", "graph"):
         from .layers import word_vocab
         # the exact vocabulary this model's word rows were trained against
         extra['word_vocab'] = list(word_vocab()[0])
@@ -155,8 +187,8 @@ def load_checkpoint(suffix="", allow_migrate=False):
 
     kind = ckpt.get('model_kind', 'beside')  # checkpoints from before model kinds were beside models
     config.model_kind = kind
-    model = _build_model(kind)
-    if kind == "layered" and 'word_vocab' in ckpt:
+    model = _build_model(kind, with_table=False)   # the table itself is in the checkpoint's buffers
+    if kind in ("layered", "graph") and 'word_vocab' in ckpt:
         from .layers import install_word_vocab
         note = install_word_vocab(ckpt['word_vocab'])
         if note:
@@ -300,8 +332,18 @@ def stop_background_training():
     print(f"  ✓ Stopped at step {train_state.step}")
 
 
-def train_n_steps(n):
-    """Run n training steps."""
+def set_learning_rate(lr):
+    """Change the learning rate everywhere it matters. config.learning_rate alone does nothing
+    once the optimizer exists -- AdamW keeps the rate it was built with."""
+    config.learning_rate = lr
+    if opt is not None:
+        for group in opt.param_groups:
+            group["lr"] = lr
+
+
+def train_n_steps(n, should_stop=None):
+    """Run n training steps. `should_stop()` (optional) is polled between steps so a caller
+    (the shell/TUI) can stop a long run cleanly; the checkpoint is still saved on the way out."""
     if model is None:
         init_model()
         _maybe_snapshot_mdbe(train_state.step)  # baseline, before any steps this run
@@ -309,6 +351,9 @@ def train_n_steps(n):
     start_step = train_state.step
     try:
         for step in range(start_step + 1, start_step + n + 1):
+            if should_stop is not None and should_stop():
+                print(f"  ■ Stopped early at step {train_state.step}")
+                break
             loss = train_step()
             train_state.loss_history.append((step, loss))
             train_state.step = step
@@ -326,4 +371,4 @@ def train_n_steps(n):
         if model is not None:
             save_checkpoint()
 
-    print(f"  ✓ Trained {n} steps (total: {train_state.step})")
+    print(f"  ✓ Trained {train_state.step - start_step} steps (total: {train_state.step})")

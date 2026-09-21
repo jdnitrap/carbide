@@ -29,6 +29,7 @@ class Config:
         # "beside" = flags + grammar beside the byte embedding (best held-out loss in the
         # corrected ablation, 2026-09-21); "layered" = full L1/L2/L3 LayerStack.
         self.model_kind = "beside"
+        self.graph_db = "graph_memory.db"  # built by: python -m carbide_modules.graphmem build-core
         self.steps_total = 3000
         self.checkpoint_dir = "carbide_checkpoints"
         self.data_file = None  # Track current dataset

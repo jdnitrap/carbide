@@ -30,7 +30,21 @@ def _sandbox(kind):
     config.model_kind = kind
     training.model = training.opt = None
     assert dataset.load_dataset(path)
+    if kind == "graph":
+        config.graph_db = os.path.join(tmp, "graph.db")
+        _tiny_graph(config.graph_db)
     return tmp
+
+
+def _tiny_graph(db_path):
+    """A small dictionary over the vocabulary the sandbox just built."""
+    from carbide_modules.graphmem import GraphStore
+    from carbide_modules.graphmem import store as gs
+    with GraphStore(db_path) as st:
+        with st.run("build") as r:
+            for i, w in enumerate(layers.word_vocab()[0][:200]):
+                st.add_edge(w, ["NOUN", "VERB", "ADJECTIVE", "ARTICLE"][i % 4], gs.REL_HAS_POS,
+                            source=gs.SOURCE_DICTIONARY, run=r, dst_kind="POS")
 
 
 def _train(n):
@@ -64,6 +78,37 @@ def test_beside_model_end_to_end():
 
 def test_layered_model_end_to_end():
     _roundtrip("layered")
+
+
+def test_graph_model_end_to_end_and_its_checkpoint_carries_its_own_table():
+    tmp = _sandbox("graph")
+    training.init_model()
+    assert training._kind_of(training.model) == "graph"
+    table = training.model.layers.graph_table.clone()
+    assert float(table.abs().sum()) > 0, "the compiled table should have reached the model"
+    losses = _train(50)
+    assert sum(losses[-5:]) < sum(losses[:5]), "graph: loss should fall"
+    training.save_checkpoint()
+    os.remove(config.graph_db)                       # the checkpoint must not need the database again
+    training.model = training.opt = None
+    config.model_kind = "beside"
+    assert training.load_checkpoint()
+    assert training._kind_of(training.model) == "graph"
+    assert torch.equal(training.model.layers.graph_table, table)
+    out = generation.generate("the ", n_bytes=30, temperature=0.8, top_k=10)
+    assert isinstance(out, str) and out.startswith("the ") and len(out) > 4
+    _train(5)
+
+
+def test_graph_model_without_a_database_says_how_to_build_one():
+    _sandbox("graph")
+    config.graph_db = os.path.join(tempfile.mkdtemp(), "missing.db")
+    try:
+        training.init_model()
+    except RuntimeError as e:
+        assert "graphmem build-core" in str(e)
+        return
+    raise AssertionError("a missing graph database must raise a helpful error")
 
 
 def test_layered_checkpoint_carries_its_vocabulary():

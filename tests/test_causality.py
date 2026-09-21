@@ -55,7 +55,7 @@ def test_prefix_is_causal_in_every_mode():
         torch.manual_seed(0)
         model = L.Carbide(d_model=32, n_layers=2, d_state=8).eval()
         a = TEXT[:60]
-        for mode in L.MODES:
+        for mode in (m for m in L.MODES if m not in L.GRAPH_MODES):  # graph modes: see test_graph_model.py
             for cut in (2, 9, 20, 33, 47):
                 b = a[:cut] + "qzx" + a[cut + 3:]  # same prefix, different later bytes
                 with torch.no_grad():

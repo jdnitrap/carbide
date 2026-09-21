@@ -287,14 +287,19 @@ def resume_training():
 
 def menu_repl():
     """Interactive text generation loop."""
+    from . import generation
     print("\n" + "-"*70)
     print("REPL MODE — Type prompts to generate continuations")
     print("-"*70)
-    print("Commands: :help, :temp <0.5-2.0>, :topk <5-50>, :exit")
+    print("Commands: :help, :temp, :topk, :topp, :rep, :ngram, :len, :seed, :preset, :exit")
     print()
 
-    temperature = 0.8
-    top_k = 20
+    ctl = dict(zip(("temperature", "top_k", "top_p", "repetition_penalty", "no_repeat_ngram"), generation.DEFAULTS))
+    ctl["seed"] = None
+    n_bytes = 80
+    casts = {":temp": ("temperature", float), ":topk": ("top_k", int), ":topp": ("top_p", float),
+             ":rep": ("repetition_penalty", float), ":ngram": ("no_repeat_ngram", int),
+             ":seed": ("seed", int)}
 
     while True:
         try:
@@ -305,20 +310,36 @@ def menu_repl():
             elif prompt == ":exit":
                 break
             elif prompt == ":help":
-                print("  :temp <val>  - set temperature (higher=more random)")
-                print("  :topk <val>  - set top-k filtering")
-                print("  :exit        - back to menu")
+                print("  :temp <val>    temperature (0 = greedy, higher = more random)")
+                print("  :topk <val>    sample only from the k likeliest bytes")
+                print("  :topp <val>    nucleus sampling (0.9 = smallest set holding 90%)")
+                print("  :rep <val>     repetition penalty (1 = off, 1.1-1.2 = gentle)")
+                print("  :ngram <val>   forbid repeating a run of this many bytes (0 = off; try 12-24)")
+                print("  :len <val>     bytes to generate")
+                print("  :seed <val>    repeatable output")
+                print("  :preset <calm|balanced|wild>")
+                print("  :exit          back to menu")
                 continue
-            elif prompt.startswith(":temp "):
-                temperature = float(prompt.split()[1])
-                print(f"  ✓ Temperature set to {temperature}")
+            elif prompt == ":preset" or prompt.startswith(":preset "):
+                name = prompt.split()[1] if len(prompt.split()) > 1 else ""
+                if name not in generation.PRESETS:
+                    print(f"  Choose one of: {', '.join(sorted(generation.PRESETS))}")
+                    continue
+                ctl.update(zip(("temperature", "top_k", "top_p", "repetition_penalty", "no_repeat_ngram"),
+                               generation.PRESETS[name]))
+                print(f"  ✓ Preset {name}: " + ", ".join(f"{k}={v:g}" for k, v in ctl.items() if v is not None))
                 continue
-            elif prompt.startswith(":topk "):
-                top_k = int(prompt.split()[1])
-                print(f"  ✓ Top-k set to {top_k}")
+            elif prompt.startswith(":len "):
+                n_bytes = int(prompt.split()[1])
+                print(f"  ✓ Length set to {n_bytes}")
+                continue
+            elif prompt.split()[0] in casts and len(prompt.split()) > 1:
+                key, cast = casts[prompt.split()[0]]
+                ctl[key] = cast(prompt.split()[1])
+                print(f"  ✓ {key} set to {ctl[key]}")
                 continue
 
-            continuation = generate(prompt, n_bytes=80, temperature=temperature, top_k=top_k)
+            continuation = generate(prompt, n_bytes=n_bytes, **ctl)
             print(f"  {continuation}\n")
         except KeyboardInterrupt:
             break
@@ -347,7 +368,7 @@ Current settings:
 4. batch_size
 5. seq_len (context window, bytes)
 6. learning_rate
-7. model_kind (beside = best measured | layered = full L1/L2/L3)
+7. model_kind (beside = best measured | layered = L1/L2/L3 | graph = reads the graph memory)
 8. Back
 """)
     choice = input("Edit: ").strip()
@@ -370,7 +391,7 @@ Current settings:
         elif choice == "5":
             config.seq_len = int(input("  New seq_len: "))
         elif choice == "6":
-            config.learning_rate = float(input("  New learning_rate: "))
+            training.set_learning_rate(float(input("  New learning_rate: ")))
         elif choice == "7":
             kind = input("  model_kind (beside/layered): ").strip().lower()
             if kind not in training.MODEL_KINDS:

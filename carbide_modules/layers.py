@@ -289,9 +289,15 @@ def strips(bytes_seq, history=None, stream=None):
 class LayerStack(nn.Module):
     """Ingest L1 values + L2 word row + L3 packed slot into d_model."""
 
-    def __init__(self, d_model):
+    def __init__(self, d_model, graph_cols=0):
         super().__init__()
         self.d_model = d_model
+        self.graph_cols = graph_cols
+        if graph_cols:
+            # the compiled graph table (graphmem.compile): one row per Layer-2 word id. A buffer,
+            # so a checkpoint carries the exact table the model was trained against.
+            self.graph_proj = nn.Linear(graph_cols, d_model, bias=False)
+            self.register_buffer("graph_table", torch.zeros(WORD_VOCAB_SIZE, graph_cols))
         self.byte = nn.Embedding(256, d_model)
         self.word = nn.Embedding(WORD_VOCAB_SIZE, d_model)
         self.l1_proj = nn.Linear(NUM_CONSTRAINTS, d_model, bias=False)
@@ -306,15 +312,23 @@ class LayerStack(nn.Module):
         word_ids = s["word_ids"].to(bytes_seq.device)
         sent_ids = s["sent_ids"].to(bytes_seq.device)
 
+        graph_mode = mode in GRAPH_MODES
+        if graph_mode and not self.graph_cols:
+            raise ValueError(f"mode {mode!r} needs a model built with graph_cols (model kind 'graph')")
         l1 = self.byte(bytes_seq)
-        if mode in ("full", "l1", "l1_l2", "l1_l2_l3", "flags_only"):
+        if mode in ("full", "l1", "l1_l2", "l1_l2_l3", "flags_only") or graph_mode:
             l1 = l1 + self.l1_proj(flags)
         l2 = self.word(word_ids)
-        if mode in ("full", "l1_l2", "l1_l2_l3"):
+        if mode in ("full", "l1_l2", "l1_l2_l3", "l1_l2_graph"):
             l2 = l2 + self.l2_proj(grammar)
         x = l1
-        if mode in ("full", "l1_l2", "l1_l2_l3"):
+        if mode in ("full", "l1_l2", "l1_l2_l3") or graph_mode:
             x = x + l2
+        if graph_mode:
+            # dictionary/graph knowledge about the most recently COMPLETED word (word ids are causal)
+            gfeat = self.graph_table[word_ids]
+            s["graph"] = gfeat
+            x = x + self.graph_proj(gfeat)
         if mode in ("full", "l1_l2_l3"):
             if pack_state is None:
                 packed = causal_pack(l2, sent_ids)
@@ -403,18 +417,19 @@ def export_sentence_table(model, filepath, sample_text="The cat sat. Did it run?
         csv.writer(fh).writerows(rows)
 
 
-MODES = ("full", "l1_l2_l3", "l1_l2", "l1", "flags_only", "no_constraints", "plain_embedding")
+GRAPH_MODES = ("l1_l2_graph", "l1_graph")   # l1_graph: the graph REPLACES the rule-based grammar columns
+MODES = ("full", "l1_l2_l3", "l1_l2", "l1", "flags_only", "no_constraints", "plain_embedding") + GRAPH_MODES
 
 
 class Block(nn.Module):
     """Re-inject named L1/L2/L3 strip values into each SSM block."""
 
-    def __init__(self, d_model, d_state=16):
+    def __init__(self, d_model, d_state=16, extra_cols=0):
         super().__init__()
         from .mdbe import SelectiveSSM
         self.norm = nn.LayerNorm(d_model)
         self.ssm = SelectiveSSM(d_model, d_state=d_state)
-        self.constraint_proj = nn.Linear(STRIP_WIDTH, d_model, bias=False)
+        self.constraint_proj = nn.Linear(STRIP_WIDTH + extra_cols, d_model, bias=False)
 
     def forward(self, x, constraint_cols):
         if constraint_cols.shape[-1] != self.constraint_proj.in_features:
@@ -433,19 +448,47 @@ class Block(nn.Module):
 class Carbide(nn.Module):
     """Selective SSM with the three-layer MDBE stack on the front."""
 
-    def __init__(self, d_model=64, n_layers=2, d_state=16):
+    def __init__(self, d_model=64, n_layers=2, d_state=16, graph_cols=0, default_mode="full"):
         super().__init__()
         from .mdbe import MDBE, LocalByteConv
         self.mdbe = MDBE(d_model)
-        self.layers = LayerStack(d_model)
+        self.layers = LayerStack(d_model, graph_cols=graph_cols)
         self.mdbe.base = self.layers.byte
         self.local_conv = LocalByteConv(d_model)
-        self.blocks = nn.ModuleList([Block(d_model, d_state=d_state) for _ in range(n_layers)])
+        self.blocks = nn.ModuleList([Block(d_model, d_state=d_state, extra_cols=graph_cols)
+                                     for _ in range(n_layers)])
         self.head_norm = nn.LayerNorm(d_model)
         self.head = nn.Linear(d_model, 256)
         self.last_strips = None
+        self.default_mode = default_mode  # what model(x) uses; the graph kind defaults to a graph mode
 
-    def forward(self, bytes_seq, mode="full", history=None):
+    def set_graph_table(self, table):
+        """Install a compiled graph table (rows <= the word table). Refreshing it changes what
+        the model sees for known words, so a model is normally trained against one table."""
+        buf = self.layers.graph_table
+        t = table.to(buf.dtype)
+        if t.shape[1] != buf.shape[1] or t.shape[0] > buf.shape[0]:
+            raise ValueError(f"table {tuple(t.shape)} does not fit {tuple(buf.shape)}")
+        with torch.no_grad():
+            buf.zero_()
+            buf[:t.shape[0]] = t
+
+    def constraint_cols_for(self, mode, s):
+        """The columns every block re-injects for `mode`. One place, used by forward()
+        AND the incremental decoder, so training and generation cannot drift apart."""
+        cols = s["strip"]
+        if mode in ("flags_only", "l1", "l1_graph"):
+            cols = cols.clone()
+            cols[..., NUM_CONSTRAINTS:] = 0
+        elif mode in ("l1_l2", "l1_l2_graph"):
+            cols = cols.clone()
+            cols[..., -NUM_SENTENCE_DIMS:] = 0
+        if "graph" in s:
+            cols = torch.cat([cols, s["graph"]], dim=-1)
+        return cols
+
+    def forward(self, bytes_seq, mode=None, history=None):
+        mode = mode or self.default_mode
         if mode not in MODES:
             # an unrecognized name used to fall through to a byte-only embedding while the
             # blocks still received the full strip -- a silent hybrid matching no real mode
@@ -464,13 +507,7 @@ class Carbide(nn.Module):
             use = "full" if mode in ("full", "l1_l2_l3") else mode
             x, s = self.layers(bytes_seq, history=history, mode=use)
             self.last_strips = s
-            constraint_cols = s["strip"]
-            if mode in ("flags_only", "l1"):
-                constraint_cols = constraint_cols.clone()
-                constraint_cols[..., NUM_CONSTRAINTS:] = 0
-            elif mode == "l1_l2":
-                constraint_cols = constraint_cols.clone()
-                constraint_cols[..., -NUM_SENTENCE_DIMS:] = 0
+            constraint_cols = self.constraint_cols_for(mode, s)
 
         x = x + self.local_conv(x)
         for block in self.blocks:
