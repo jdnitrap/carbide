@@ -18,46 +18,48 @@ def load_dataset(filepath=None):
         filepath = filepath.strip()
 
         if not os.path.exists(filepath):
-            print(f"  ✗ File not found: {filepath}")
+            print(f"  \u2717 File not found: {filepath}")
             print(f"  Current directory: {os.getcwd()}")
             print(f"  Available .txt files: {', '.join([f for f in os.listdir('.') if f.endswith('.txt')]) or '(none)'}")
             return False
 
         if not os.path.isfile(filepath):
-            print(f"  ✗ Not a file: {filepath}")
+            print(f"  \u2717 Not a file: {filepath}")
             return False
 
         try:
             text = open(filepath, encoding="utf-8", errors="ignore").read()
             data = torch.tensor(list(text.encode("utf-8")), dtype=torch.long)
             config.data_file = filepath
-            print(f"  ✓ Loaded {filepath}")
-            print(f"  ✓ {len(text):,} chars, {len(data):,} bytes")
+            print(f"  \u2713 Loaded {filepath}")
+            print(f"  \u2713 {len(text):,} chars, {len(data):,} bytes")
             return True
         except Exception as e:
-            print(f"  ✗ Error loading file: {e}")
+            print(f"  \u2717 Error loading file: {e}")
             return False
     else:
-        # task1 Part 2: prefer the real ~5MB corpus over the 49.5KB built-in
-        # fallback whenever it's sitting right there — using the tiny
-        # fallback by default while scaling the model up would make the
-        # "grow the corpus proportionally" half of Part 2 silently not
-        # happen even though the real data was already on disk.
         if os.path.exists("train.txt"):
             text = open("train.txt", encoding="utf-8", errors="ignore").read()
             config.data_file = "train.txt"
-            print(f"✓ loaded train.txt ({len(text):,} chars)")
+            print(f"\u2713 loaded train.txt ({len(text):,} chars)")
         elif os.path.exists("carbide_training_dataset.txt"):
             text = open("carbide_training_dataset.txt", encoding="utf-8", errors="ignore").read()
             config.data_file = "carbide_training_dataset.txt"
-            print(f"✓ loaded carbide_training_dataset.txt ({len(text):,} chars)")
+            print(f"\u2713 loaded carbide_training_dataset.txt ({len(text):,} chars)")
         else:
             text = FALLBACK * 500
             config.data_file = "[fallback]"
-            print("✓ using built-in fallback sample")
+            print("\u2713 using built-in fallback sample")
 
         data = torch.tensor(list(text.encode("utf-8")), dtype=torch.long)
-        print(f"✓ {len(data):,} bytes total\n")
+        print(f"\u2713 {len(data):,} bytes total\n")
+        try:
+            from .layers import build_word_vocab
+            path = config.data_file if config.data_file and os.path.exists(config.data_file) else None
+            n = len(build_word_vocab(path))
+            print(f"\u2713 Layer-2 word vocab {n} entries")
+        except Exception:
+            pass
         return True
 
 

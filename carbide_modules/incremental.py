@@ -15,7 +15,8 @@ the naive per-step reference in test_scan.py.
 import torch
 import torch.nn.functional as F
 
-from .mdbe import all_constraints, _MAX_LOOKBACK, _CLAUSE_LOOKBACK
+from .mdbe import _MAX_LOOKBACK, _CLAUSE_LOOKBACK
+from .layers import strips
 
 _HISTORY_LOOKBACK = max(_MAX_LOOKBACK, _CLAUSE_LOOKBACK)
 
@@ -37,12 +38,19 @@ class IncrementalState:
         # mdbe.language_mechanics_constraints()'s lookback instead of
         # LocalByteConv's.
         self.byte_history = []
+        d_model = model.layers.d_model if hasattr(model, "layers") else d_model
+        self.pack_run = torch.zeros(d_model)
+        self.pack_n = 0
+        self.pack_sid = None
 
     def clone(self):
         s = IncrementalState.__new__(IncrementalState)
         s.h = [h.clone() for h in self.h]
         s.conv_buffer = self.conv_buffer.clone()
         s.byte_history = list(self.byte_history)
+        s.pack_run = self.pack_run.clone()
+        s.pack_n = self.pack_n
+        s.pack_sid = self.pack_sid
         return s
 
 
@@ -51,9 +59,16 @@ def incremental_step(model, byte_x: int, state: IncrementalState):
     """Returns (logits for the byte AFTER byte_x, updated state)."""
     bt = torch.tensor([[byte_x]])
     history = torch.tensor([state.byte_history]) if state.byte_history else None
-    learned = model.mdbe.base(bt)
-    cols = all_constraints(bt, history=history)
-    emb = model.mdbe.proj(torch.cat([learned, cols], dim=-1))
+    if hasattr(model, "layers"):
+        pack = [state.pack_run, state.pack_n, state.pack_sid]
+        emb, s = model.layers(bt, history=history, mode="full", pack_state=pack)
+        cols = s["strip"]
+        state.pack_run, state.pack_n, state.pack_sid = pack[0], pack[1], pack[2]
+    else:
+        from .mdbe import all_constraints
+        learned = model.mdbe.base(bt)
+        cols = all_constraints(bt, history=history)
+        emb = model.mdbe.proj(torch.cat([learned, cols], dim=-1))
     state.byte_history = (state.byte_history + [byte_x])[-(_HISTORY_LOOKBACK - 1):]
 
     conv_in = torch.cat([state.conv_buffer, emb.transpose(1, 2)], dim=-1)
@@ -79,7 +94,7 @@ def incremental_step(model, byte_x: int, state: IncrementalState):
         y = y + ssm.D * h_in[:, 0]
         x = (x[:, 0] + y).unsqueeze(1)
 
-    logits = model.head(model.head_norm(x))[0, 0]
+    logits = model.head(self.head_norm(x))[0, 0] if False else model.head(model.head_norm(x))[0, 0]
     return logits, state
 
 
