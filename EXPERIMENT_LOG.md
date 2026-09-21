@@ -3,11 +3,10 @@
 **In everyday language:** this page is the lab diary. It is a list of
 bugs we found, checks we ran, and what we decided to keep or set aside.
 You do not need it to understand Carbide. For that, start at
-[HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md). To open the notebooks, see
+[TRACEABILITY.md](TRACEABILITY.md).
 
-See also `MDBE_MANIFEST.md` for the detailed 3-seed constraint-flag
-ablation study (kept separate since it's already a complete, self-
-contained experimental writeup).
+See also `MDBE_MANIFEST.md` for column lists and ablation tables.
 
 ## History (2026-09-11, from prior session records)
 
@@ -67,8 +66,8 @@ gradient-checked; full CLI concurrency-guard and checkpoint round-trip
 verified via scripted runs. Benchmark: Python/PyTorch ~5x faster
 (39.7 vs 7.7 steps/sec) — PyTorch's backend is BLAS-optimized/fused/
 multi-threaded, the hand-rolled engine isn't. One perf pass (same-shape
-fast paths in add/mul, hoisting a per-timestep reshape) narrowed the gap
-to ~1.9x slower. A C++ parallel-scan attempt was tried, verified
+fast paths in add/mul, hoisting a per-timestep reshape) narrowed the
+gap to ~1.9x slower. A C++ parallel-scan attempt was tried, verified
 correct, but was actually slower (rebuilding full arrays via concat
 each round costs more than the sequential loop saves) — reverted.
 Decision: focus stays on `carbide_modules/` (Python).
@@ -110,3 +109,54 @@ covered by its own test. If picking up `carbide_speculative/` again,
 its own recorded caveat applies: its measured 1.9x speculative-decoding
 speedup was calculated against the *old, uncached* baseline and is now
 known-stale — see that repo's README for the honest current status.
+
+## 2026-09-18 — Three notebooks, beside layout, training health check
+
+Wired Layer 1 (hex + 6 flags), Layer 2 (word table + grammar beside
+the flags), Layer 3 (causal sentence pack + 6 sentence dims) in
+`carbide_modules/layers.py`. Named strips stay dumpable. The SSM sees
+only mixed numbers. Incremental decode carries `pack_state` so a
+one-byte step matches a full forward.
+
+3-seed layer ablation (d_model=128, 2 layers, seq_len=128, 500 steps):
+
+- beside mean last-50 = 2.1338
+- l1_l2 mean last-50 = **2.0425**
+- l1_l2_l3 mean last-50 = 2.0465
+
+Layer 1 + Layer 2 is the loss win. Layer 3 is a near-tie on this
+budget and stays because the labeled sentence book is part of the
+design.
+
+800-step training on `carbide_training_dataset.txt` (8,021,709 bytes,
+same small stack): first-50 loss 2.883 → last-50 1.593. Health check,
+not a claim of language understanding.
+
+Also locked: soft grammar scores (not 0/1) on Layer 2/3; hard 0/1 only
+on the six hex flags; auto-discovered columns park beside existing
+ones and can be marked fixed after training
+(`discover_dimension.py`).
+
+## 2026-09-21 — Learned cells, “watch it think,” docs pass
+
+Docs were still calling Layer 2 and Layer 3 “the intended next
+notebooks.” They are implemented. README, HOW_IT_WORKS,
+MDBE_MANIFEST, and a new TRACEABILITY page now say so in everyday
+language.
+
+Learned cells vs rule scores: a learned number on a named row and
+named column is the model’s opinion. That is more useful for “open
+the brain” than a hand-written 0.95. It is still not a thought-movie
+of the SSM. `trace_weights.py` labels hidden units by the named
+column they listen to most. `weight_trace.csv` and
+`embedding_dimension_names.json` are the dumps.
+
+Prior-art check (deep dive, not a claim of a legal search):
+byte-level selective SSMs exist (MambaByte). Hierarchical byte models
+exist (SpaceByte, H-Net). Named linguistic features and probing
+exist. We did not find another public stack that keeps (1) the real
+hex as the row ID, (2) six hex-decode flags, (3) grammar *beside*
+those flags, (4) a word table ingested from those hex spans, (5) a
+fixed sentence slot with named sentence mechanics, and (6) a dumpable
+named strip that is never what the SSM is fed. Pieces are common.
+The whole recipe is Carbide’s as far as this check could see.
