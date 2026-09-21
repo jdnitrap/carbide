@@ -221,3 +221,50 @@ each word's *first* letter, so every word showed `PART_OF_SPEECH:NONE`.
 `all_constraints(flags_only=)`, which were never committed to `mdbe.py`
 (commit a2f87a7 added only the test). `cli.py` / `training.py` still import
 `Carbide` from `mdbe.py`, so the menu's training does not use the layer stack.
+
+## 2026-09-21 — Graph-fed Layer 2: a small gain over the layered model, not over `beside`
+
+Two new arms read the compiled graph memory (`graphmem`: WordNet dictionary for the corpus vocabulary +
+Carbide's function-word lists, 108 columns per word: part of speech, semantic class, discovered
+dimensions, domain flags), looked up through the same causal word ids as Layer 2, so they cannot see
+the future (`tests/test_graph_model.py`):
+
+- `l1_l2_graph`: layers 1-2 as before, plus the graph features.
+- `l1_graph`: the graph features REPLACE the hand-written grammar columns (the test of "dictionary
+  instead of word lists").
+
+Same setup as the 2026-09-21 correction above (d_model=128, 2 layers, seq_len=128, batch 16, lr 3e-3,
+500 steps, seeds 0/1/2, identical batches and initialisation per seed), all four arms re-run on the
+current code. `ablate_layers.py --arm {beside,l1_l2,l1_l2_graph,l1_graph} --graphdb graph_memory.db`.
+
+| arm | params | last-50 train | held-out | seed 0 | seed 1 | seed 2 |
+|---|---|---|---|---|---|---|
+| beside | 163,136 | 1.7695 | **1.7316** | 1.7334 | 1.7321 | 1.7294 |
+| l1_l2 | 471,744 | 1.7867 | 1.7531 | 1.7615 | 1.7570 | 1.7410 |
+| l1_l2_graph | 513,216 | 1.7781 | 1.7440 | 1.7547 | 1.7397 | 1.7377 |
+| l1_graph | 513,216 | 1.8055 | 1.7704 | 1.7769 | 1.7589 | 1.7754 |
+
+Paired by seed (held-out, negative = better):
+
+- `l1_l2_graph` vs `l1_l2`: mean -0.0091, better on 3 of 3 seeds. The graph features help a little.
+- `l1_l2_graph` vs `beside`: mean +0.0124, worse on 3 of 3 seeds, with three times the parameters.
+- `l1_graph` vs `l1_l2`: mean +0.0173, worse on 3 of 3. **The dictionary did not replace the hand-written
+  grammar columns at this scale.**
+
+Conclusions, and their limits: the bar is still the plain `beside` layout (1.7316), so `beside` stays the
+default model kind. The graph is worth keeping because it is what lets knowledge grow without retraining
+and can hold domain modules, not because it wins on loss today. One budget (500 steps), one corpus, three
+seeds; the graph table covers 1,672 of the 1,791 vocabulary words and nothing was tuned.
+
+A hypothesis, not tested: the rule columns are computed per byte and change inside a word (morphology,
+clause position), while a word's graph features can only appear once the word is complete, so they cannot
+help predict the letters of the word being spelled. Untested next steps: graph features on top of the
+`beside` layout, longer training, and features keyed on the word prefix.
+
+Also new the same day: `carbide_modules/shell.py` / `tui.py` / `settings.py`, sampling controls
+(top-p, repetition penalty, repeated-phrase block, seed, presets), automatic `graph teach` (gated on a
+probe beating the majority-class baseline out-of-fold), and discovered dimensions recorded in the graph
+with permanent slots. Bugs found by running things end to end: no checkpoint/snapshot directories on a
+fresh clone, the layered model crashing at its first weight-trace snapshot, the menu's learning-rate
+option never reaching the optimizer, and the graph store burning node ids (which inflated the word-table
+capacity about 20x).

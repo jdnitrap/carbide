@@ -18,3 +18,8 @@ carbide_ablation.png
 # generated per corpus / per checkpoint (a checkpoint also carries its own copy)
 word_vocab.json
 word_vocab.json.bak
+
+# built or written locally
+graph_memory.db
+graph_table.pt
+carbide_settings.json

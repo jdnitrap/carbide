@@ -61,6 +61,55 @@ That opens a menu: train, generate, save tables, compare versions.
 
 Default size (menu model): width 256, 4 layers. Smaller test runs are fine while you check the notebooks.
 
+## The shell and the TUI
+
+Besides the menu there is a command shell, and a terminal UI built on it (same layout as the
+esgm-gru project): a status panel with an editable settings panel beside it, a log, and a command line.
+
+```
+python3 -m carbide_modules.shell --data carbide_training_dataset.txt     # plain commands
+python3 -m carbide_modules.tui   --data carbide_training_dataset.txt     # needs: pip install textual
+```
+
+`help` lists the commands: `train`, `generate`, `preset`, `save`/`load`, `set`, and `graph ...`.
+`set` shows and changes every knob (model size, learning rate, sampling controls, graph thresholds);
+each one says where it is saved. A trained model, its settings and its graph carry over a restart.
+In the TUI: F2 opens the settings panel (Enter edits a value or cycles a choice), F5 trains 100
+steps, F8 stops training, F9 saves.
+
+## Creative text
+
+`generate` and the menu REPL take more than temperature and top-k: top-p, a repetition penalty, a
+repeated-phrase block, a seed, and three presets (`calm`, `balanced`, `wild`). With everything at its
+default the sampling is identical to before. Expect plausible words and style from a model this small,
+not coherent long stories.
+
+## Graph memory
+
+A knowledge graph that sits beside Carbide as long-term memory (`carbide_modules/graphmem/`, SQLite,
+built and grown automatically -- there are no commands to hand-edit it):
+
+```
+pip install nltk && python -m nltk.downloader wordnet         # once, for the dictionary
+python -m carbide_modules.graphmem build-core --corpus carbide_training_dataset.txt
+python -m carbide_modules.graphmem ingest --module law --file law.tsv --format triples   # dump domain data in
+python -m carbide_modules.graphmem import-dimensions          # keep discovered dimensions across restarts
+```
+
+- **Dictionary:** WordNet for the words in your corpus (part of speech, semantic class, is-a, synonyms,
+  antonyms, part-of) plus Carbide's own function-word lists, which WordNet lacks.
+- **Modules:** law, health, finance, math... are separate modules you dump data into (`triples`,
+  `glossary`, or raw `text`, which finds the terms specific to that domain). A module can be turned off.
+- **Growth without retraining:** node ids only grow and are never reused, dictionary edges can never be
+  overwritten, capacity grows in blocks, thresholds retune themselves inside fixed bounds, and every
+  automatic change is written to an audit log. Discovered dimensions keep a permanent column slot, so a
+  new one never changes the model's input width.
+- **Carbide reads it** through a compiled table, in the `graph` model kind (`set model.kind graph`).
+  `graph teach` lets Carbide propose grammar for words the dictionary lacks; it is applied only if a
+  probe on Carbide's hidden states beats the majority-class baseline on words it was not trained on.
+- Whether the graph-fed model actually beats the plain one is measured, not assumed: see the newest
+  entry in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+
 ## Project layout
 
 - `carbide_modules/` — the program
@@ -68,6 +117,9 @@ Default size (menu model): width 256, 4 layers. Smaller test runs are fine while
   - `mdbe.py` — six hex flags, grammar columns, selective SSM
   - `trace_weights.py` — names for otherwise-opaque learned cells
   - `discover_dimension.py` — proposed extra columns, fixed after training
+  - `graphmem/` — the graph memory: `store.py` (rules it enforces), `wordnet_loader.py`, `ingest.py`, `compile.py`, `teach.py`
+  - `shell.py`, `tui.py`, `settings.py` — command shell, terminal UI, and the one registry of knobs
+  - `generation.py` — sampling controls and presets
 - `tests/` — checks that the reader and the notebooks still agree with themselves
 - `_archive/` and `carbide_module_cplusplus/` — older or side work, not the active program
 
