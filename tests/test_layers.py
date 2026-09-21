@@ -37,3 +37,14 @@ def test_layerstack_on_model():
     m(x, mode="full")
     assert m.last_strips is not None
     assert m.blocks[0].constraint_proj.in_features == STRIP_WIDTH
+
+
+def test_unknown_mode_is_rejected():
+    m = Carbide(d_model=32, n_layers=1, d_state=8)
+    x = torch.tensor([[ord(c) for c in "Hi."]])
+    try:
+        m(x, mode="l1l2")
+    except ValueError as e:
+        assert "unknown mode" in str(e)
+    else:
+        raise AssertionError("a misspelled mode was silently accepted")

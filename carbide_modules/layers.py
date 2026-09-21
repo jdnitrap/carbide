@@ -406,6 +406,10 @@ class Carbide(nn.Module):
         self.last_strips = None
 
     def forward(self, bytes_seq, mode="full", history=None):
+        if mode not in MODES:
+            # an unrecognized name used to fall through to a byte-only embedding while the
+            # blocks still received the full strip -- a silent hybrid matching no real mode
+            raise ValueError(f"unknown mode {mode!r}; expected one of {MODES}")
         if mode == "plain_embedding":
             x = self.layers.byte(bytes_seq)
             constraint_cols = torch.zeros(
