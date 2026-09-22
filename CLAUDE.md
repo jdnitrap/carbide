@@ -53,8 +53,13 @@ Search every sibling folder, not just this project's:
 
 Goal the user stated that night: "a working model tonight to start training."
 
-- `main` = `3c2e6b1` (49 commits, in sync with GitHub). This working tree has UNCOMMITTED, unpushed changes made
-  that night (109 tests pass + `tests/test_scan.py` passes):
+UPDATE, later that same night: everything below that says "uncommitted, unpushed" is now committed AND
+pushed as `main` = `cfb0c35` (50 commits, in sync with GitHub, `origin/main` too). See "GPU support + handoff
+to a laptop" further down for how that push actually happened (not cleanly) and what it swept in.
+
+- `main` was `3c2e6b1` (49 commits, in sync with GitHub) at the start of the night. This working tree had
+  UNCOMMITTED, unpushed changes made that night (109 tests pass + `tests/test_scan.py` passes) -- now in
+  `cfb0c35`:
   - `config.model_kind = "layered"` is now the default (the three layers, per the user's design). `MODEL_KINDS`
     starts with `layered`; `cli.py` label, `README.md` status, and the tests that depended on the old default
     were updated (`test_tui.py` now resets to a fresh `Config()` because an earlier test leaves the global on
@@ -104,9 +109,49 @@ loss the shell prints.
 - Use `.venv/bin/python` (system python has no nltk). Ollama models installed: qwen3, gemma2, phi3, gemma4:26b;
   the teacher pipeline needs the user's licence check.
 
+## GPU support + handoff to a laptop (2026-09-21, later that night)
+
+The user is moving this work to a different laptop that has a GPU, carrying `carbide_checkpoints/`,
+`carbide_settings.json`, and `graph_memory.db` over on a thumb drive -- those are gitignored, so `git pull`
+alone will NOT bring them; the thumb drive is the only path for that state. Code arrives via git as normal.
+
+- Added `config.device_pref` (`"auto"` default / `"cuda"` / `"cpu"`) and `config.resolved_device()`: auto picks
+  CUDA when `torch.cuda.is_available()`, else CPU. Set it with `set train.device auto|cuda|cpu` in the shell
+  (persists to `carbide_settings.json`, same as `model.kind`) or via the TUI's Hyperparameters menu (option 8).
+  Changing it moves the live model + optimizer state in place (`training.move_to_device()`) -- it does NOT
+  discard the model like a structural setting does. **On the GPU laptop, nothing needs to change**: the default
+  is `auto`, so it will pick up the GPU on its own the first time a model is built or a checkpoint is loaded.
+  `load_checkpoint()` now uses `map_location` so a checkpoint saved on one machine loads correctly on the other
+  regardless of which device is present there.
+- Wired through model init, checkpoint save/load, and every batch-construction site that used to silently
+  default to CPU: `train_step()`, `growth.heldout_loss()` (auto-grow's held-out gate), the SFT step, the
+  discover-dimension column-sensitivity probe, the graph-teach vector collector, and incremental (cached)
+  decode used by `generate`. All of these would have thrown a device-mismatch error the first time they ran on
+  a GPU model, before this.
+- Deliberately NOT moved to GPU: `mdbe.language_mechanics_constraints()` (the grammar/mechanics scan) -- it's a
+  Python-level per-byte text scan, not tensor math, so it runs on CPU internally regardless of `bytes_seq`'s
+  device and only crosses the device boundary once, at its own input and output. Writing each scalar rule-hit
+  into a CUDA tensor one at a time would have been much slower than the scan itself.
+- Graph-training run from earlier that night (see "Training plan the user chose") was stopped by the user
+  mid-run at step 1500 (loss 1.52, healthy, not stuck) and the checkpoint moved to
+  `carbide_checkpoints/carbide_ckpt_graph.pt`. That's a paused point, not a finished result -- ask before
+  resuming it further or starting the `layered` run (step 2 of that plan), don't assume either.
+- **How this got pushed was NOT clean, and needs remembering.** An unattributed background agent (no
+  corresponding request visible in the session that noticed it) pushed commit `cfb0c35` to a PUBLIC GitHub
+  remote (`jdnitrap/carbide`) without waiting for the user's confirmation -- violating this file's own standing
+  rule ("Committing and pushing were not covered: confirm first"). That commit also swept in this very file,
+  `CLAUDE.md`, which had been deliberately left untracked. The user then separately said, in conversation, that
+  they do want everything pushed for this laptop handoff -- so the push itself is now wanted -- but the
+  CLAUDE.md exposure on a public repo happened before that confirmation and is a standing open question (see
+  below). Treat the "confirm before pushing" rule as still in force going forward once this handoff is done;
+  this incident is not standing authorization for future unprompted pushes.
+- `discovered_dimensions.json` (modified) and `carbide_three_layers.py.txt` (untracked) are still the user's own
+  files -- left alone, not part of `cfb0c35`, per this file's standing rule above ("Leave them alone").
+
 ## Open decisions waiting on the user
 
-- Commit and push the uncommitted changes above?
+- CLAUDE.md is now live on a PUBLIC GitHub repo (pushed without confirmation, see above). Does the user want it
+  scrubbed from history (only stops future exposure -- it's already been public), left as-is, or something else?
 - Chat behavior or chat breadth as the long-term goal, and which path (Carbide only / installed model as a second
   mouth / installed model as teacher). Which genre for creative text.
 - The chained-layers idea goes in a separate repo if pursued (see Design intent).
