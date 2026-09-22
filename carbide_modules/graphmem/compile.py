@@ -117,7 +117,7 @@ def grow_embedding(emb, new_rows):
         raise ValueError("an embedding table can only grow")
     if new_rows == emb.num_embeddings:
         return emb
-    new = nn.Embedding(new_rows, emb.embedding_dim, padding_idx=emb.padding_idx)
+    new = nn.Embedding(new_rows, emb.embedding_dim, padding_idx=emb.padding_idx, device=emb.weight.device)
     with torch.no_grad():
         std = float(emb.weight.std()) if emb.num_embeddings > 1 else 0.02
         new.weight.normal_(0.0, max(std, 1e-3))

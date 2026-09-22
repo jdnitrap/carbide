@@ -21,6 +21,11 @@ from .trace_weights import export_weight_trace_table, used_bytes_from_corpus
 model = None
 opt = None
 
+# Guards every place model/opt tensors are read+mutated together (a training step's forward/
+# backward/opt.step(), and move_to_device()'s relocation of them) -- train.device is documented
+# as safe to change while background training is running, so those two must not interleave.
+_model_lock = threading.Lock()
+
 
 def _maybe_snapshot_mdbe(step):
     """task1 refinement #4: periodic MDBE-table snapshot during training,
@@ -146,9 +151,12 @@ def refresh_graph_table():
 
 def init_model():
     global model, opt
-    model = _build_model()
-    model.to(config.resolved_device())
-    opt = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
+    m = _build_model()
+    m.to(config.resolved_device())
+    o = torch.optim.AdamW(m.parameters(), lr=config.learning_rate)
+    with _model_lock:
+        # published together: a concurrent move_to_device() must never see a model with no opt yet
+        model, opt = m, o
     n_params = sum(p.numel() for p in model.parameters())
     print(f"✓ Model initialized: {n_params:,} parameters on {config.resolved_device()}")
 
@@ -161,11 +169,14 @@ def move_to_device():
     if model is None:
         return
     device = config.resolved_device()
-    model.to(device)
-    for state in opt.state.values():
-        for k, v in state.items():
-            if torch.is_tensor(v):
-                state[k] = v.to(device)
+    with _model_lock:
+        if model is None or opt is None:
+            return
+        model.to(device)
+        for state in opt.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device)
 
 
 def train_step():
@@ -176,12 +187,13 @@ def train_step():
     device = config.resolved_device()
     xb, yb = dataset.get_batch()
     xb, yb = xb.to(device), yb.to(device)
-    logits = model(xb)
-    loss = F.cross_entropy(logits.reshape(-1, 256), yb.reshape(-1))
-    opt.zero_grad()
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-    opt.step()
+    with _model_lock:
+        logits = model(xb)
+        loss = F.cross_entropy(logits.reshape(-1, 256), yb.reshape(-1))
+        opt.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
     return loss.item()
 
 

@@ -9,6 +9,8 @@ import json
 import math
 import os
 
+import torch
+
 from . import generation, training
 from .config import config
 
@@ -84,8 +86,15 @@ def _lr_pair():
 
 def _device():
     def set_(v):
+        if v == "cuda" and not torch.cuda.is_available():
+            raise ValueError("no CUDA GPU is available on this machine")
+        old = config.device_pref
         config.device_pref = v
-        training.move_to_device()   # moves any live model + optimizer state; no-op before one exists
+        try:
+            training.move_to_device()   # moves any live model + optimizer state; no-op before one exists
+        except Exception:
+            config.device_pref = old    # never leave device_pref pointing at a device that isn't usable
+            raise
     return (lambda: config.device_pref), set_
 
 

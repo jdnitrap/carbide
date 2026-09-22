@@ -47,7 +47,7 @@ def heldout_loss(model, n_batches=8, seed=1234):
     was_training = model.training
     model.eval()
     try:
-        device = config.resolved_device()
+        device = next(model.parameters()).device
         losses = []
         for _ in range(n_batches):
             x, y = dataset.get_holdout_batch(g)
