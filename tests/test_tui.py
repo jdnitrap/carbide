@@ -17,8 +17,10 @@ async def _session():
     from textual.widgets import DataTable, Input, RichLog
 
     from carbide_modules import dataset, generation, layers, shell, training
+    from carbide_modules.config import Config, config
     from carbide_modules.tui import CarbideApp
 
+    config.model_kind = Config().model_kind   # the global keeps whatever kind an earlier test used
     tmp, old = tempfile.mkdtemp(), os.getcwd()
     with open(CORPUS, "rb") as f, open(os.path.join(tmp, "corpus.txt"), "wb") as out:
         out.write(f.read(60_000))
@@ -108,12 +110,12 @@ def test_the_tui_drives_carbide_end_to_end():
         print("SKIP: textual not installed")
         return
     r = _run(_session())
-    n_settings = 25
+    n_settings = 26   # +1 for train.device (2026-09-21, GPU auto-detect/override)
     assert r["rows"] == r["polled"] == n_settings, r
-    assert r["kind_at_start"] == "beside"
+    assert r["kind_at_start"] == "layered"
     assert r["step"] == "20", r["step"]
     assert r["f2_focus"] and r["input_focus"]
-    assert r["kind_cycled"] == "layered", "Enter on a choice setting should cycle it"
+    assert r["kind_cycled"] == "beside", "Enter on a choice setting should cycle it"
     assert r["prefill"] == "set gen.top_p 1" and r["top_p"] == 0.5
     assert r["stopped_step"] < 20000 and "Stopped early" in r["log"], (r["stopped_step"])
     assert r["live_step"] > 0, "the status panel should move while training is still running"

@@ -59,6 +59,7 @@ def status_line():
         "loss": f"{train_state.current_loss:.4f}" if train_state.current_loss else "n/a",
         "d_model": config.d_model, "n_layers": config.n_layers, "d_state": config.d_state,
         "seq_len": config.seq_len, "batch": config.batch_size, "lr": f"{config.learning_rate:g}",
+        "device": f"{config.device_pref}({config.resolved_device()})",
         "data": (os.path.basename(config.data_file) if config.data_file else "default").replace(" ", "_"),
         "bytes": len(dataset.data) if dataset.data is not None else 0,
         "vocab": len(layers.word_vocab()[0]), "word_rows": layers.WORD_ROWS,

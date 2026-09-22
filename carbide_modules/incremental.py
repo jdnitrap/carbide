@@ -25,15 +25,16 @@ _HISTORY_LOOKBACK = max(_MAX_LOOKBACK, _CLAUSE_LOOKBACK)
 
 class IncrementalState:
     def __init__(self, model):
+        device = next(model.parameters()).device
         n_layers = len(model.blocks)
         d_model = model.mdbe.base.embedding_dim
         d_state = model.blocks[0].ssm.d_state
         conv_kernel = model.local_conv.kernel_size
-        self.h = [torch.zeros(1, d_model, d_state) for _ in range(n_layers)]
-        self.conv_buffer = torch.zeros(1, d_model, conv_kernel - 1)
+        self.h = [torch.zeros(1, d_model, d_state, device=device) for _ in range(n_layers)]
+        self.conv_buffer = torch.zeros(1, d_model, conv_kernel - 1, device=device)
         self.byte_history = []
         d_model = model.layers.d_model if hasattr(model, "layers") else d_model
-        self.pack_run = torch.zeros(d_model)
+        self.pack_run = torch.zeros(d_model, device=device)
         self.pack_n = 0
         self.pack_sid = None
         self.stream = new_stream_state()  # word/sentence/Layer-3 running state
@@ -53,8 +54,9 @@ class IncrementalState:
 @torch.no_grad()
 def incremental_step(model, byte_x: int, state: IncrementalState):
     """Returns (logits for the byte AFTER byte_x, updated state)."""
-    bt = torch.tensor([[byte_x]])
-    history = torch.tensor([state.byte_history]) if state.byte_history else None
+    device = state.conv_buffer.device
+    bt = torch.tensor([[byte_x]], device=device)
+    history = torch.tensor([state.byte_history], device=device) if state.byte_history else None
     if hasattr(model, "layers"):
         pack = [state.pack_run, state.pack_n, state.pack_sid]
         mode = getattr(model, "default_mode", "full")

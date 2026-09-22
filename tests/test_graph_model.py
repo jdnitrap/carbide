@@ -79,3 +79,19 @@ def test_a_table_that_does_not_fit_is_refused():
     except ValueError:
         return
     raise AssertionError("wrong-width table must be refused")
+
+
+def test_full_graph_keeps_layer_3_and_l1_l2_graph_does_not():
+    m = _model("full_graph")
+    x = _bytes("the cat sat. did the dog run?")
+    with torch.no_grad():
+        full_a, l12_a = m(x, mode="full_graph"), m(x, mode="l1_l2_graph")
+        m.layers.l3_proj.weight.zero_(); m.layers.pack_proj.weight.zero_()
+        full_b, l12_b = m(x, mode="full_graph"), m(x, mode="l1_l2_graph")
+    assert float((full_a - full_b).abs().max()) > 1e-4, "full_graph should depend on Layer 3"
+    assert float((l12_a - l12_b).abs().max()) < 1e-6, "l1_l2_graph should not see Layer 3"
+
+
+def test_the_graph_model_kind_defaults_to_all_three_layers_plus_the_graph():
+    from carbide_modules import training
+    assert training._build_model("graph", with_table=False).default_mode == "full_graph"

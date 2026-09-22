@@ -47,9 +47,11 @@ def heldout_loss(model, n_batches=8, seed=1234):
     was_training = model.training
     model.eval()
     try:
+        device = config.resolved_device()
         losses = []
         for _ in range(n_batches):
             x, y = dataset.get_holdout_batch(g)
+            x, y = x.to(device), y.to(device)
             losses.append(F.cross_entropy(model(x).reshape(-1, 256), y.reshape(-1)).item())
     finally:
         model.train(was_training)

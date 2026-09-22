@@ -44,20 +44,21 @@ def sft_step(prompt_bytes, response_bytes):
     if len(full) < 2:
         return None  # nothing to predict
 
-    xb = torch.tensor([full[:-1]], dtype=torch.long)
-    yb = torch.tensor([full[1:]], dtype=torch.long)
+    device = next(training.model.parameters()).device
+    xb = torch.tensor([full[:-1]], dtype=torch.long, device=device)
+    yb = torch.tensor([full[1:]], dtype=torch.long, device=device)
 
     # mask[i] corresponds to target position i+1 in `full`: 1.0 if that
     # position is inside the response, 0.0 if it's still the prompt — only
     # response-token predictions contribute to the loss.
     prompt_len = len(prompt_bytes)
-    mask = torch.zeros(len(full) - 1)
+    mask = torch.zeros(len(full) - 1, device=device)
     mask[max(0, prompt_len - 1):] = 1.0
 
     logits = training.model(xb)                          # (1, T, 256)
     logp = F.log_softmax(logits.reshape(-1, 256), dim=-1)
     target = yb.reshape(-1)
-    nll = -logp[torch.arange(len(target)), target]        # (T,)
+    nll = -logp[torch.arange(len(target), device=device), target]        # (T,)
 
     denom = mask.sum().clamp(min=1.0)
     loss = (nll * mask).sum() / denom

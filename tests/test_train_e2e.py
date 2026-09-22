@@ -145,3 +145,9 @@ def test_unknown_model_kind_is_rejected():
     except ValueError:
         return
     raise AssertionError("an unknown model kind should raise")
+
+
+def test_the_default_model_is_the_three_layer_one():
+    from carbide_modules.config import Config
+    assert Config().model_kind == "layered"
+    assert training.MODEL_KINDS[0] == "layered"

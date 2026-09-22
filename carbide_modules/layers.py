@@ -326,7 +326,8 @@ class LayerStack(nn.Module):
             return False
         self.word = grow_embedding(self.word, new_rows)
         if self.graph_cols:
-            pad = torch.zeros(new_rows - old, self.graph_cols, dtype=self.graph_table.dtype)
+            pad = torch.zeros(new_rows - old, self.graph_cols, dtype=self.graph_table.dtype,
+                               device=self.graph_table.device)
             self.graph_table = torch.cat([self.graph_table, pad])   # new words start with no graph features
         set_word_rows(new_rows)
         return True
@@ -352,7 +353,7 @@ class LayerStack(nn.Module):
             s["pack_state"] = pack_state
             return self.mix(x), s
         l2 = self.word(word_ids)
-        if mode in ("full", "l1_l2", "l1_l2_l3", "l1_l2_graph"):
+        if mode in ("full", "l1_l2", "l1_l2_l3", "l1_l2_graph", "full_graph"):
             l2 = l2 + self.l2_proj(grammar)
         x = l1
         if mode in ("full", "l1_l2", "l1_l2_l3") or graph_mode:
@@ -362,7 +363,7 @@ class LayerStack(nn.Module):
             gfeat = self.graph_table[word_ids]
             s["graph"] = gfeat
             x = x + self.graph_proj(gfeat)
-        if mode in ("full", "l1_l2_l3"):
+        if mode in ("full", "l1_l2_l3", "full_graph"):
             if pack_state is None:
                 packed = causal_pack(l2, sent_ids)
             else:
@@ -450,7 +451,9 @@ def export_sentence_table(model, filepath, sample_text="The cat sat. Did it run?
         csv.writer(fh).writerows(rows)
 
 
-GRAPH_MODES = ("l1_l2_graph", "l1_graph", "beside_graph")   # l1_graph: the graph REPLACES the rule grammar columns
+# l1_graph: the graph REPLACES the rule grammar columns. full_graph: all three layers PLUS the graph features
+# (l1_l2_graph has no Layer 3), so it is the layered model with the graph added.
+GRAPH_MODES = ("l1_l2_graph", "l1_graph", "beside_graph", "full_graph")
 # beside_*: the word-free layout of the old `beside` model (byte + flags + grammar, no word row, no
 # sentence pack) built inside LayerStack, so adding the graph to it is a clean one-variable test.
 BESIDE_MODES = ("beside_layered", "beside_graph")

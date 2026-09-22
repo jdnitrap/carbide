@@ -109,7 +109,8 @@ python -m carbide_modules.graphmem import-dimensions          # keep discovered 
   overwritten, capacity grows in blocks, thresholds retune themselves inside fixed bounds, and every
   automatic change is written to an audit log. Discovered dimensions keep a permanent column slot, so a
   new one never changes the model's input width.
-- **Carbide reads it** through a compiled table, in the `graph` model kind (`set model.kind graph`).
+- **Carbide reads it** through a compiled table, in the `graph` model kind (`set model.kind graph`): the
+  full three-layer model plus the graph's word features.
   `graph teach` lets Carbide propose grammar for words the dictionary lacks; it is applied only if a
   probe on Carbide's hidden states beats the majority-class baseline on words it was not trained on.
 - Whether the graph-fed model actually beats the plain one is measured, not assumed: see the newest
@@ -150,4 +151,4 @@ Layer 1, Layer 2, and Layer 3 are live on this branch. Grammar sits beside the s
 
 Adding the word book (Layer 1 + Layer 2) helped the guessing game more than the current sentence pack. Layer 3 is still kept because the labeled sentence facts are part of the design, not because they already win on loss.
 
-**Correction (2026-09-21):** the size of that Layer 2 gain, and the loss numbers above, were measured while Layer 2 could see a word's identity before the word was finished (a lookahead leak, now fixed). With the leak removed, Layer 2 gives only a small gain (about 0.02 held-out loss), Layer 3 adds nothing measurable, and the plain `beside` layout is best. See the 2026-09-21 correction in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
+**Correction (2026-09-21):** the size of that Layer 2 gain, and the loss numbers above, were measured while Layer 2 could see a word's identity before the word was finished (a lookahead leak, now fixed). With the leak removed, Layer 2 gives only a small gain (about 0.02 held-out loss) and Layer 3 adds nothing measurable, so the plain `beside` layout, which has neither, has the lowest held-out loss at the sizes tested. `layered` (all three layers) is still the default model because the three named layers are the design; `set model.kind beside` gives the loss baseline. See the 2026-09-21 correction in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).

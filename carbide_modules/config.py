@@ -1,5 +1,6 @@
 """Global hyperparameters and run settings."""
 import os
+import torch
 
 
 class Config:
@@ -26,9 +27,16 @@ class Config:
         # so expect ~16x fewer steps/sec than the 128 baseline.
         self.seq_len = 2048
         self.learning_rate = 3e-3
-        # "beside" = flags + grammar beside the byte embedding (best held-out loss in the
-        # corrected ablation, 2026-09-21); "layered" = full L1/L2/L3 LayerStack.
-        self.model_kind = "beside"
+        # "layered" = the full L1/L2/L3 LayerStack (letter book, word book, sentence book): the
+        # main model, by design. "beside" = only flags + grammar beside the byte embedding, no word
+        # table and no sentence layer; it had the best held-out loss in the corrected ablation
+        # (2026-09-21) and is kept as the loss baseline. "graph" = layered plus the graph memory.
+        self.model_kind = "layered"
+        # 2026-09-21, at the user's request ahead of moving this machine's work to a laptop
+        # with a GPU: "auto" picks CUDA when it's present and falls back to CPU when it's not,
+        # so the same checkout trains on either machine with no edit. "cuda"/"cpu" force one
+        # side explicitly (see resolved_device()); `set train.device cuda|cpu|auto`.
+        self.device_pref = "auto"
         self.graph_db = "graph_memory.db"  # built by: python -m carbide_modules.graphmem build-core
         self.steps_total = 3000
         self.checkpoint_dir = "carbide_checkpoints"
@@ -58,6 +66,16 @@ class Config:
             os.makedirs(self.checkpoint_dir)
         if not os.path.exists(self.mdbe_snapshot_dir):
             os.makedirs(self.mdbe_snapshot_dir)
+
+    def resolved_device(self):
+        """The actual torch.device training/generation/export should use right now."""
+        if self.device_pref == "cuda":
+            if not torch.cuda.is_available():
+                raise RuntimeError("train.device is set to cuda but no CUDA GPU is available on this machine")
+            return torch.device("cuda")
+        if self.device_pref == "cpu":
+            return torch.device("cpu")
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 config = Config()

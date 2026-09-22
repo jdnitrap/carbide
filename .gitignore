@@ -25,3 +25,6 @@ graph_table.pt
 carbide_settings.json
 growth_log.jsonl
 *.manifest.jsonl
+
+# local Python environment (has nltk for the graph memory; reuses the system torch)
+.venv/

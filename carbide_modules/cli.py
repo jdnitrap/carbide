@@ -361,6 +361,7 @@ Current settings:
   seq_len:      {config.seq_len}
   learning_rate: {config.learning_rate}
   model_kind:   {config.model_kind}
+  device:       {config.device_pref}  (resolves to {config.resolved_device()})
 
 1. d_model (embedding dimension)
 2. n_layers (SSM blocks)
@@ -368,8 +369,9 @@ Current settings:
 4. batch_size
 5. seq_len (context window, bytes)
 6. learning_rate
-7. model_kind (beside = best measured | layered = L1/L2/L3 | graph = reads the graph memory)
-8. Back
+7. model_kind (layered = L1/L2/L3, the main model | beside = flags + grammar only | graph = reads the graph memory)
+8. device (auto = CUDA if present else CPU | cuda/cpu = force one; moves the live model, no retrain needed)
+9. Back
 """)
     choice = input("Edit: ").strip()
 
@@ -393,11 +395,23 @@ Current settings:
         elif choice == "6":
             training.set_learning_rate(float(input("  New learning_rate: ")))
         elif choice == "7":
-            kind = input("  model_kind (beside/layered): ").strip().lower()
+            kind = input("  model_kind (layered/beside/graph): ").strip().lower()
             if kind not in training.MODEL_KINDS:
                 print(f"  ✗ Choose one of: {', '.join(training.MODEL_KINDS)}")
                 return
             config.model_kind = kind
+        elif choice == "8":
+            dev = input("  device (auto/cuda/cpu): ").strip().lower()
+            if dev not in ("auto", "cuda", "cpu"):
+                print("  ✗ Choose one of: auto, cuda, cpu")
+                return
+            if dev == "cuda" and not torch.cuda.is_available():
+                print("  ✗ No CUDA GPU is available on this machine")
+                return
+            config.device_pref = dev
+            training.move_to_device()
+            print(f"  ✓ device = {dev}  (resolves to {config.resolved_device()})")
+            return
     except ValueError:
         print("  ✗ Please enter a valid number")
         return
@@ -470,8 +484,9 @@ def menu_mdbe():
     print(f"  {'Byte':>6} {'Char':^10} Embedding dims")
     print("  " + "-"*60)
 
+    device = next(training.model.parameters()).device
     for b, char in sample_bytes.items():
-        emb = training.model.mdbe.base(torch.tensor([[b]]))[0, 0].detach().tolist()
+        emb = training.model.mdbe.base(torch.tensor([[b]], device=device))[0, 0].detach().tolist()
         emb_str = " ".join(f"{x:7.3f}" for x in emb[:8])
         print(f"  {b:6d} {char:^10} {emb_str}")
 

@@ -66,7 +66,7 @@ def label_embedding_dimensions(model, top_k=3, byte_values=None):
     if byte_values is None:
         byte_values = list(range(256))
     d_model = model.mdbe.base.embedding_dim
-    bytes_ = torch.tensor(byte_values).unsqueeze(1)     # (N, 1)
+    bytes_ = torch.tensor(byte_values, device=next(model.parameters()).device).unsqueeze(1)     # (N, 1)
     embed = model.mdbe.base(bytes_).squeeze(1)          # (N, d_model)
     cols = all_constraints(bytes_).squeeze(1)           # (N, len(CONSTRAINT_NAMES))
 
@@ -255,10 +255,11 @@ def export_full_table(model, filepath, byte_values=None, refresh_names=True):
     names = (save_embedding_dimension_names(model, byte_values=byte_values) if refresh_names
              else (load_embedding_dimension_names() or name_embedding_dimensions(model, byte_values=byte_values)))
     d_model = model.mdbe.base.embedding_dim
+    device = next(model.parameters()).device
 
     rows = []
     for b in range(256):
-        byte_tensor = torch.tensor([[b]])
+        byte_tensor = torch.tensor([[b]], device=device)
         learned = model.mdbe.base(byte_tensor)[0, 0].tolist()
         live = all_constraints(byte_tensor)[0, 0].tolist()
         char_repr = repr(chr(b)) if 32 <= b < 127 else ""

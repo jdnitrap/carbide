@@ -657,10 +657,19 @@ def language_mechanics_constraints(bytes_seq: torch.Tensor, history: torch.Tenso
     before the current chunk still resolves correctly one byte at a
     time. A full forward pass over a whole sequence can omit it: the
     sequence already contains its own history, and the true start of a
-    stream honestly has none to give."""
+    stream honestly has none to give.
+
+    This whole scan is Python-level string matching in a per-byte loop, not tensor math, so
+    it runs on the CPU regardless of what device `bytes_seq` lives on -- writing each scalar
+    hit straight into a CUDA tensor would mean one host<->device sync per hit instead of one.
+    Only the input decode and the final result cross the device boundary, once each."""
+    out_device = bytes_seq.device
+    bytes_seq = bytes_seq.cpu()
     B, T = bytes_seq.shape
     if history is None:
         history = bytes_seq.new_zeros(B, 0)
+    else:
+        history = history.cpu()
     H = history.shape[1]
     full = torch.cat([history, bytes_seq], dim=1)
     full_f = full.float()
@@ -747,7 +756,7 @@ def language_mechanics_constraints(bytes_seq: torch.Tensor, history: torch.Tenso
                 if tag:
                     put(b, pos, dim, tag, CONF_GUESS)
 
-    return out_full[:, H:]
+    return out_full[:, H:].to(out_device)
 
 
 def all_constraints(bytes_seq: torch.Tensor, history: torch.Tensor = None, flags_only: bool = False) -> torch.Tensor:
@@ -846,9 +855,10 @@ def export_mdbe_table(model: "Carbide", filepath: str) -> None:
     bytes to `filepath`. Shared by menu_save() (one-shot, on demand) and the
     periodic training-time snapshots (task1 refinement #4) so both produce
     the exact same format and can be diffed against each other directly."""
+    device = next(model.parameters()).device
     rows = []
     for b in range(256):
-        byte_tensor = torch.tensor([[b]])
+        byte_tensor = torch.tensor([[b]], device=device)
         learned = model.mdbe.base(byte_tensor)[0, 0].tolist()
         live = all_constraints(byte_tensor)[0, 0].tolist()
         char_repr = repr(chr(b)) if 32 <= b < 127 else ""
@@ -872,7 +882,7 @@ class MDBE(nn.Module):
     def forward(self, bytes_seq, live=True):
         learned = self.base(bytes_seq)
         cols = all_constraints(bytes_seq) if live \
-               else torch.zeros(*bytes_seq.shape, TOTAL_CONSTRAINTS)
+               else torch.zeros(*bytes_seq.shape, TOTAL_CONSTRAINTS, device=bytes_seq.device)
         return self.proj(torch.cat([learned, cols], dim=-1))
 
 
@@ -934,10 +944,13 @@ class SelectiveSSM(nn.Module):
         # Within-chunk recurrence: real sequential loop, but batched across
         # every chunk simultaneously — this is the piece that used to be a
         # T-iteration loop and is now only a C-iteration one.
+        # unbind, not a_c[:, t]: every integer index makes autograd allocate and fill a gradient tensor as
+        # big as the whole source, once per index; unbind has one stack-shaped backward for all of them.
         h_local = a_c.new_zeros(Bsz * num_chunks, d, ds)
         h_locals = []
+        a_steps, b_steps = a_c.unbind(1), b_c.unbind(1)
         for t in range(C):
-            h_local = a_c[:, t] * h_local + b_c[:, t]
+            h_local = a_steps[t] * h_local + b_steps[t]
             h_locals.append(h_local)
         h_local = torch.stack(h_locals, dim=1)                       # (B*nc,C,d,ds)
         P = torch.cumprod(a_c, dim=1)                                # (B*nc,C,d,ds) — pure product, safe even if it hits 0
@@ -948,8 +961,9 @@ class SelectiveSSM(nn.Module):
         # Carry state across chunks — sequential, but only num_chunks steps.
         carry = a_bar.new_zeros(Bsz, d, ds)
         carries = [carry]
+        P_last, h_last = P[:, :, -1].unbind(1), h_local[:, :, -1].unbind(1)   # one index each, then views
         for i in range(num_chunks - 1):
-            carry = P[:, i, -1] * carries[-1] + h_local[:, i, -1]
+            carry = P_last[i] * carries[-1] + h_last[i]
             carries.append(carry)
         carry_stack = torch.stack(carries, dim=1)                    # (B,nc,d,ds)
 

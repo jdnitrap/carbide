@@ -218,10 +218,12 @@ def _column_sensitivity(model, dim_name, batches=4, seq_len=128):
         return 0.0
     idx = CONSTRAINT_COLUMN_NAMES.index(dim_name)
     model.eval()
+    device = next(model.parameters()).device
     deltas = []
     with torch.no_grad():
         for _ in range(batches):
             xb, yb = dataset.get_batch(seq_len=seq_len)
+            xb, yb = xb.to(device), yb.to(device)
             live = model(xb, mode="full")
             loss_live = F.cross_entropy(live.reshape(-1, 256), yb.reshape(-1))
             cols = all_constraints(xb).clone()

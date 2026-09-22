@@ -36,19 +36,22 @@ def collect_word_vectors(model, corpus_bytes, words, *, seq_len=128, max_bytes=4
     hook = model.head_norm.register_forward_hook(lambda m, i, o: grabbed.__setitem__("h", o.detach()))
     sums, counts = {}, Counter()
     model.eval()
+    device = next(model.parameters()).device
     try:
         data = corpus_bytes[:max_bytes]
         windows = [data[i:i + seq_len] for i in range(0, len(data) - seq_len, seq_len)]
         for lo in range(0, len(windows), batch):
             chunk = windows[lo:lo + batch]
-            x = torch.tensor([list(w) for w in chunk], dtype=torch.long)
+            x = torch.tensor([list(w) for w in chunk], dtype=torch.long, device=device)
             model(x)
             h = grabbed["h"]
             for b, w in enumerate(chunk):
                 text = bytes(w).decode("ascii", errors="replace").lower()
                 for m in WORD_RE.finditer(text):
                     if m.group() in words and m.end() < len(text):   # the delimiter after the word exists
-                        v = h[b, m.end()]
+                        # moved to CPU here: probe_and_propose's fit is a tiny CPU-only linear
+                        # probe (not part of the hot training loop) and never needs GPU tensors
+                        v = h[b, m.end()].detach().cpu()
                         sums[m.group()] = sums.get(m.group(), 0) + v
                         counts[m.group()] += 1
     finally:

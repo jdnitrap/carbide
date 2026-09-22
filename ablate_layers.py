@@ -1,6 +1,6 @@
 """Layer ablation for the three-layer MDBE stack. Same batches, seeds and init for every arm.
 
-  python3 ablate_layers.py --arm {beside,l1,l1_l2,l1_l2_l3,l1_l2_graph,l1_graph,beside_layered,beside_graph} --seed 0 --steps 500 --d_model 128
+  python3 ablate_layers.py --arm {beside,plain_embedding,flags_only,l1,l1_l2,l1_l2_l3,l1_l2_graph,l1_graph,beside_layered,beside_graph,full_graph} --seed 0 --steps 500 --d_model 128
   (run from the repo root; --repo points it at another checkout, e.g. an older commit)
 
 `beside` = the old mdbe.Carbide in mode "full" (six flags + grammar beside them, no word/sentence
@@ -24,7 +24,7 @@ ap.add_argument("--out", default=None); ap.add_argument("--save", default=None)
 ap.add_argument("--load", default=None, help="skip training; evaluate this saved layers.Carbide state_dict")
 ap.add_argument("--tag", default="")
 ap.add_argument("--hard", action="store_true", help="hard 0/1 grammar values (mdbe.SOFT_GRAMMAR = False)")
-ap.add_argument("--graphdb", default="graph_memory.db", help="graph memory used by the graph arms (l1_l2_graph, l1_graph)")
+ap.add_argument("--graphdb", default="graph_memory.db", help="graph memory used by the graph arms (full_graph, l1_l2_graph, l1_graph, beside_graph)")
 a = ap.parse_args()
 
 sys.path.insert(0, a.repo); os.chdir(a.repo)

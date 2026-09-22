@@ -51,7 +51,7 @@ def _maybe_autosave_checkpoint(step):
         save_checkpoint()
 
 
-MODEL_KINDS = ("beside", "layered", "graph")
+MODEL_KINDS = ("layered", "beside", "graph")   # the default first: the settings panel cycles in this order
 
 
 def _build_model(kind=None, with_table=True):
@@ -66,7 +66,7 @@ def _build_model(kind=None, with_table=True):
         from .graphmem import N_GRAPH_COLS
         from .layers import Carbide as LayeredCarbide
         m = LayeredCarbide(d_model=config.d_model, n_layers=config.n_layers, d_state=config.d_state,
-                           graph_cols=N_GRAPH_COLS, default_mode="l1_l2_graph")
+                           graph_cols=N_GRAPH_COLS, default_mode="full_graph")
         if with_table:
             m.set_graph_table(compile_graph_table())
         return m
@@ -147,9 +147,25 @@ def refresh_graph_table():
 def init_model():
     global model, opt
     model = _build_model()
+    model.to(config.resolved_device())
     opt = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"✓ Model initialized: {n_params:,} parameters")
+    print(f"✓ Model initialized: {n_params:,} parameters on {config.resolved_device()}")
+
+
+def move_to_device():
+    """Move the live model and optimizer momentum to config.resolved_device(), in place --
+    e.g. after `set train.device ...`. Weights and training step are untouched, just relocated;
+    unlike a structural setting change this never discards the model. No-op before init_model()
+    or load_checkpoint() has built one."""
+    if model is None:
+        return
+    device = config.resolved_device()
+    model.to(device)
+    for state in opt.state.values():
+        for k, v in state.items():
+            if torch.is_tensor(v):
+                state[k] = v.to(device)
 
 
 def train_step():
@@ -157,7 +173,9 @@ def train_step():
     if model is None:
         init_model()
 
+    device = config.resolved_device()
     xb, yb = dataset.get_batch()
+    xb, yb = xb.to(device), yb.to(device)
     logits = model(xb)
     loss = F.cross_entropy(logits.reshape(-1, 256), yb.reshape(-1))
     opt.zero_grad()
@@ -225,7 +243,8 @@ def load_checkpoint(suffix="", allow_migrate=False):
         print(f"  ✗ Checkpoint not found: {filename}")
         return False
 
-    ckpt = torch.load(filename, weights_only=True)
+    device = config.resolved_device()
+    ckpt = torch.load(filename, map_location=device, weights_only=True)
     config.d_model = ckpt['config']['d_model']
     config.n_layers = ckpt['config']['n_layers']
     config.d_state = ckpt['config']['d_state']
@@ -240,6 +259,7 @@ def load_checkpoint(suffix="", allow_migrate=False):
         from .layers import WORD_VOCAB_SIZE, set_word_rows
         set_word_rows(ckpt.get('word_rows', WORD_VOCAB_SIZE))   # a grown table must be rebuilt at its own size
     model = _build_model(kind, with_table=False)   # the table itself is in the checkpoint's buffers
+    model.to(device)   # ckpt tensors are already on `device` (map_location above); this moves the fresh model to match
     if kind in ("layered", "graph") and 'word_vocab' in ckpt:
         from .layers import install_word_vocab
         note = install_word_vocab(ckpt['word_vocab'])
@@ -310,7 +330,7 @@ def load_checkpoint(suffix="", allow_migrate=False):
     train_state.step = ckpt['train_state']['step']
     train_state.loss_history = ckpt['train_state']['loss_history']
 
-    print(f"  ✓ Checkpoint loaded: {filename} (step {train_state.step})")
+    print(f"  ✓ Checkpoint loaded: {filename} (step {train_state.step}, on {device})")
     return True
 
 

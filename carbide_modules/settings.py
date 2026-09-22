@@ -82,6 +82,13 @@ def _lr_pair():
     return (lambda: config.learning_rate), training.set_learning_rate
 
 
+def _device():
+    def set_(v):
+        config.device_pref = v
+        training.move_to_device()   # moves any live model + optimizer state; no-op before one exists
+    return (lambda: config.device_pref), set_
+
+
 def _build():
     S = []
 
@@ -95,6 +102,8 @@ def _build():
     add("model.d_state", "int", "file", "state size per SSM (rebuilds the model)", _structural("d_state"), lo=2, hi=256)
     add("model.soft_grammar", "bool", "file", "grammar columns hold rule confidences (on) or hard 1.0 (off); a checkpoint keeps the mode it trained on",
         _soft_grammar())
+    add("train.device", "choice", "file", "auto = CUDA if present else CPU | cuda/cpu = force one (moves the live model, no retrain needed)",
+        _device(), choices=("auto", "cuda", "cpu"))
     add("train.batch_size", "int", "file", "sequences per step", _cfg("batch_size"), lo=1, hi=256)
     add("train.seq_len", "int", "file", "context window in bytes", _cfg("seq_len"), lo=8, hi=8192)
     add("train.learning_rate", "float", "file", "AdamW learning rate (applies immediately)", _lr_pair(), lo=1e-6, hi=1.0)
